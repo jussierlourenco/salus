@@ -3,6 +3,10 @@
   "version": "0.3.0",
   "description": "Central de Inteligencia de Saude da Familia — pessoas e animais.",
   "main": "bin/cli.js",
+  "scripts": {
+    "build": "cd app && npm install && npm run build",
+    "test": "cd app && npm test"
+  },
   "bin": {
     "salus": "bin/cli.js",
     "salus-ai": "bin/cli.js",
