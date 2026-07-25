@@ -121,12 +121,15 @@ export function Ajustes() {
   const extrairConfigForm = (): ConfigProvedorIA => {
     const preset = PRESETS.find((p) => p.id === presetSel);
     const tipo = preset ? preset.tipo : 'openai_compat';
-    return {
+    const res: ConfigProvedorIA = {
       tipo,
       chave: chave.trim(),
-      modelo: modelo.trim() || (preset ? preset.modelo_padrao : 'gemini-1.5-flash'),
-      url_base: urlBase.trim() || undefined,
+      modelo: modelo.trim() || (preset ? preset.modelo_padrao : 'gemini-2.0-flash'),
     };
+    if (urlBase.trim()) {
+      res.url_base = urlBase.trim();
+    }
+    return res;
   };
 
   const handleTestar = async () => {

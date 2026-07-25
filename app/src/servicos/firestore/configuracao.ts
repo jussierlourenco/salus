@@ -39,10 +39,18 @@ export async function obterConfigUsuario(uid: string): Promise<ConfigUsuario> {
 
 /**
  * Salva as configurações do usuário no Firestore.
+ * Sanitiza automaticamente propriedades `undefined` incompatíveis com Firestore.
  */
 export async function salvarConfigUsuario(uid: string, config: Partial<ConfigUsuario>): Promise<void> {
   const ref = docConfig(uid);
-  await setDoc(ref, { ...config, atualizado_em: new Date().toISOString() }, { merge: true });
+  const payload = {
+    ...config,
+    atualizado_em: new Date().toISOString(),
+  };
+
+  // Transforma em JSON string e parse para expurgar chaves com valor `undefined`
+  const payloadLimpo = JSON.parse(JSON.stringify(payload));
+  await setDoc(ref, payloadLimpo, { merge: true });
 }
 
 /**
