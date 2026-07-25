@@ -5,7 +5,7 @@ import {
   Shield, ChevronRight, CheckCircle2, AlertTriangle,
   RefreshCw, Eye, EyeOff, Check, X
 } from 'lucide-react';
-import { useConfiguracao } from '../../contextos/ConfigContext';
+import { useConfiguracao } from '../../core/config/ConfigContext';
 import type { ConfigProvedorIA, ProvedorIATipo } from '../../types/dominio';
 
 interface PresetItem {

@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { Card, Botao } from '../../componentes/ui';
 import { MessageCircle, Send, Sparkles, Info, Settings, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useConfiguracao } from '../../contextos/ConfigContext';
-import { useAuth } from '../../auth/AuthProvider';
-import { criarProvedor, type MensagemChat } from '../../servicos/ia/interface';
+import { useConfiguracao } from '../../core/config/ConfigContext';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { criarProvedor, type MensagemChat } from '../../core/ia/interface';
 import { listarMembros, listarMedicamentos } from '../../servicos/firestore/repositorio';
 
 interface Mensagem {

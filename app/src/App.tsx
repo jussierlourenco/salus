@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth, AuthProvider } from './auth/AuthProvider';
-import { ConfigProvider } from './contextos/ConfigContext';
-import { AppShell } from './componentes/AppShell';
-import { Carregando } from './componentes/ui';
+import { useAuth, AuthProvider } from './core/auth/AuthProvider';
+import { ConfigProvider } from './core/config/ConfigContext';
+import { AppShell } from './core/ui/AppShell';
+import { Carregando } from './core/ui';
 import { Login } from './telas/Login';
 import { Onboarding } from './telas/Onboarding';
 import { Painel } from './telas/Painel';

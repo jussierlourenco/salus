@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../auth/AuthProvider';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { Botao } from '../../componentes/ui';
 import { Stethoscope, Shield, Smartphone, Cloud } from 'lucide-react';
 import { useEffect } from 'react';
