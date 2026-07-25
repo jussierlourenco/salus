@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+/* ── Design Tokens ── */
+@theme {
+  --color-salus-50: #f0fdfa;
+  --color-salus-100: #ccfbf1;
+  --color-salus-200: #99f6e4;
+  --color-salus-300: #5eead4;
+  --color-salus-400: #2dd4bf;
+  --color-salus-500: #14b8a6;
+  --color-salus-600: #0d9488;
+  --color-salus-700: #0f766e;
+  --color-salus-800: #115e59;
+  --color-salus-900: #134e4a;
+
+  --color-alerta-50: #fffbeb;
+  --color-alerta-100: #fef3c7;
+  --color-alerta-200: #fde68a;
+  --color-alerta-400: #fbbf24;
+  --color-alerta-500: #f59e0b;
+  --color-alerta-600: #d97706;
+
+  --color-vencido-500: #dc2626;
+  --color-vencido-600: #b91c1c;
+
+  --color-fundo: #0f172a;
+  --color-fundo-card: #1e293b;
+  --color-fundo-elevado: #334155;
+  --color-texto: #f1f5f9;
+  --color-texto-secundario: #94a3b8;
+  --color-borda: #334155;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+}
+
+/* ── Base ── */
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-fundo);
+  color: var(--color-texto);
+  min-height: 100dvh;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-fundo);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-fundo-elevado);
+  border-radius: 3px;
+}
+
+/* ── Focus ── */
+:focus-visible {
+  outline: 2px solid var(--color-salus-500);
+  outline-offset: 2px;
+}
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out both;
+}
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out both;
+}
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+/* ── Glass ── */
+.glass {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+/* ── Utilities ── */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
