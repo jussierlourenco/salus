@@ -42,7 +42,7 @@ export class ProvedorGemini implements ProvedorIA {
 
   private obterListaModelosCandidatos(modeloInicial: string): string[] {
     const limpo = this.formatarNomeModelo(modeloInicial);
-    const candidatos = [limpo, 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+    const candidatos = [limpo, 'gemini-1.5-flash-latest', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
     // Retorna lista única preservando a ordem
     return Array.from(new Set(candidatos));
   }
@@ -53,6 +53,7 @@ export class ProvedorGemini implements ProvedorIA {
   ): Promise<any> {
     const modelosParaTestar = this.obterListaModelosCandidatos(this.modelo);
     let ultimoErro: Error | null = null;
+    let tevelimiteExcedido = false;
 
     for (const mod of modelosParaTestar) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${this.chave}`;
@@ -68,21 +69,34 @@ export class ProvedorGemini implements ProvedorIA {
         }
 
         const errText = await res.text();
-        // Se for 404 (modelo não encontrado), continua o loop para testar o próximo candidato
-        if (res.status === 404 && modelosParaTestar.length > 1) {
-          console.warn(`[Gemini] Modelo ${mod} retornou 404, tentando próximo candidato...`);
+
+        if (res.status === 429) {
+          tevelimiteExcedido = true;
+        }
+
+        // Se for 404 ou 429, tenta o próximo modelo candidato da lista
+        if ((res.status === 404 || res.status === 429) && mod !== modelosParaTestar[modelosParaTestar.length - 1]) {
+          console.warn(`[Gemini] Modelo ${mod} retornou HTTP ${res.status}. Tentando próximo candidato...`);
           ultimoErro = new Error(`Erro no ${origem} (${res.status}): ${errText}`);
           continue;
+        }
+
+        if (res.status === 429) {
+          throw new Error('Cota temporariamente excedida no Google Gemini (HTTP 429). Por favor, aguarde alguns segundos ou altere para outro provedor gratuito em Ajustes (ex: Groq ou OpenRouter).');
         }
 
         throw new Error(`Erro no ${origem} (${res.status}): ${errText}`);
       } catch (err) {
         ultimoErro = err instanceof Error ? err : new Error(String(err));
-        if (err instanceof Error && err.message.includes('404')) {
+        if (err instanceof Error && (err.message.includes('404') || err.message.includes('429')) && mod !== modelosParaTestar[modelosParaTestar.length - 1]) {
           continue;
         }
         throw err;
       }
+    }
+
+    if (tevelimiteExcedido) {
+      throw new Error('Cota temporariamente excedida no Google Gemini (HTTP 429). Por favor, aguarde cerca de 45 segundos ou altere para outro provedor em Ajustes (ex: Groq ou OpenRouter).');
     }
 
     throw ultimoErro || new Error(`Erro no ${origem}: Nenhum modelo Gemini respondeu.`);
