@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, AuthProvider } from './auth/AuthProvider';
+import { ConfigProvider } from './contextos/ConfigContext';
 import { AppShell } from './componentes/AppShell';
 import { Carregando } from './componentes/ui';
 import { Login } from './telas/Login';
@@ -22,21 +23,23 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/onboarding" element={
-            <GuardaAuth><Onboarding /></GuardaAuth>
-          } />
-          <Route element={<GuardaAuth><AppShell /></GuardaAuth>}>
-            <Route index element={<Painel />} />
-            <Route path="membros" element={<Membros />} />
-            <Route path="membro/:id" element={<Perfil />} />
-            <Route path="caixa-de-entrada" element={<CaixaDeEntrada />} />
-            <Route path="chat" element={<Chat />} />
-            <Route path="ajustes" element={<Ajustes />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <ConfigProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/onboarding" element={
+              <GuardaAuth><Onboarding /></GuardaAuth>
+            } />
+            <Route element={<GuardaAuth><AppShell /></GuardaAuth>}>
+              <Route index element={<Painel />} />
+              <Route path="membros" element={<Membros />} />
+              <Route path="membro/:id" element={<Perfil />} />
+              <Route path="caixa-de-entrada" element={<CaixaDeEntrada />} />
+              <Route path="chat" element={<Chat />} />
+              <Route path="ajustes" element={<Ajustes />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ConfigProvider>
       </AuthProvider>
     </BrowserRouter>
   );

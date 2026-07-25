@@ -1,39 +1,221 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Botao, Campo } from '../../componentes/ui';
 import {
-  Settings, Key, Cloud, Download, Upload, Trash2,
-  Shield, ChevronRight,
+  Settings, Key, Cloud, Download, Trash2,
+  Shield, ChevronRight, CheckCircle2, AlertTriangle,
+  RefreshCw, Eye, EyeOff, Check, X
 } from 'lucide-react';
-import { exportarParaZip, baixarArquivo } from '../../servicos/exportImport';
+import { useConfiguracao } from '../../contextos/ConfigContext';
+import type { ConfigProvedorIA, ProvedorIATipo } from '../../types/dominio';
 
-const presets = [
-  { id: 'gemini', nome: 'Google Gemini', gratis: true, desc: 'Recomendado · Melhor para PDFs e imagens' },
-  { id: 'groq', nome: 'Groq', gratis: true, desc: 'Muito rápido · Bom para o Chat' },
-  { id: 'openrouter', nome: 'OpenRouter', gratis: true, desc: 'Vários modelos gratuitos' },
-  { id: 'mistral', nome: 'Mistral', gratis: true, desc: 'Camada "Experiment" gratuita' },
-  { id: 'custom', nome: 'Personalizado', gratis: false, desc: 'Qualquer provedor compatível com OpenAI' },
+interface PresetItem {
+  id: string;
+  nome: string;
+  tipo: ProvedorIATipo;
+  url_base?: string;
+  modelo_padrao: string;
+  gratis: boolean;
+  desc: string;
+}
+
+const PRESETS: PresetItem[] = [
+  {
+    id: 'gemini',
+    nome: 'Google Gemini',
+    tipo: 'gemini',
+    modelo_padrao: 'gemini-1.5-flash',
+    gratis: true,
+    desc: 'Recomendado · Excelente para PDFs, fotos de exames e chat',
+  },
+  {
+    id: 'groq',
+    nome: 'Groq',
+    tipo: 'openai_compat',
+    url_base: 'https://api.groq.com/openai/v1',
+    modelo_padrao: 'llama-3.3-70b-versatile',
+    gratis: true,
+    desc: 'Ultra rápido · Ideal para o Chat em tempo real',
+  },
+  {
+    id: 'openrouter',
+    nome: 'OpenRouter',
+    tipo: 'openai_compat',
+    url_base: 'https://openrouter.ai/api/v1',
+    modelo_padrao: 'google/gemini-2.0-flash-lite-001',
+    gratis: true,
+    desc: 'Catálogo variado com vários modelos gratuitos',
+  },
+  {
+    id: 'mistral',
+    nome: 'Mistral AI',
+    tipo: 'openai_compat',
+    url_base: 'https://api.mistral.ai/v1',
+    modelo_padrao: 'mistral-small-latest',
+    gratis: true,
+    desc: 'Modelos europeus de alta precisão',
+  },
+  {
+    id: 'custom',
+    nome: 'Personalizado / Local',
+    tipo: 'openai_compat',
+    url_base: 'http://localhost:11434/v1',
+    modelo_padrao: 'llama3',
+    gratis: true,
+    desc: 'Compatível com OpenAI (Ollama, LM Studio, vLLM)',
+  },
 ];
 
 export function Ajustes() {
+  const { config, salvarConfigIA, testarIA, exportarDadosZip, apagarConta } = useConfiguracao();
+
   const [secaoAberta, setSecaoAberta] = useState<string | null>('ia');
+
+  // Estado do formulário de IA
+  const [presetSel, setPresetSel] = useState<string>('gemini');
+  const [chave, setChave] = useState('');
+  const [modelo, setModelo] = useState('gemini-1.5-flash');
+  const [urlBase, setUrlBase] = useState('');
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mostrarAvancado, setMostrarAvancado] = useState(false);
+
+  // Status de feedback
+  const [testando, setTestando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [exportando, setExportando] = useState(false);
+  const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+
+  // Modal de exclusão
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
+  const [confirmacaoTexto, setConfirmacaoTexto] = useState('');
+  const [excluindo, setExcluindo] = useState(false);
+
+  // Inicializa o formulário com a config salva
+  useEffect(() => {
+    if (config.provedor_ia) {
+      setChave(config.provedor_ia.chave || '');
+      setModelo(config.provedor_ia.modelo || 'gemini-1.5-flash');
+      setUrlBase(config.provedor_ia.url_base || '');
+
+      // Identifica o preset correspondente
+      const encontrado = PRESETS.find((p) => {
+        if (config.provedor_ia?.tipo === 'gemini' && p.tipo === 'gemini') return true;
+        if (p.url_base && config.provedor_ia?.url_base === p.url_base) return true;
+        return false;
+      });
+      if (encontrado) setPresetSel(encontrado.id);
+      else setPresetSel('custom');
+    }
+  }, [config]);
 
   const toggleSecao = (id: string) => {
     setSecaoAberta(secaoAberta === id ? null : id);
   };
 
+  const selecionarPreset = (p: PresetItem) => {
+    setPresetSel(p.id);
+    setModelo(p.modelo_padrao);
+    setUrlBase(p.url_base || '');
+    setFeedback(null);
+  };
+
+  const extrairConfigForm = (): ConfigProvedorIA => {
+    const preset = PRESETS.find((p) => p.id === presetSel);
+    const tipo = preset ? preset.tipo : 'openai_compat';
+    return {
+      tipo,
+      chave: chave.trim(),
+      modelo: modelo.trim() || (preset ? preset.modelo_padrao : 'gemini-1.5-flash'),
+      url_base: urlBase.trim() || undefined,
+    };
+  };
+
+  const handleTestar = async () => {
+    const cfgIA = extrairConfigForm();
+    if (!cfgIA.chave) {
+      setFeedback({ tipo: 'erro', texto: 'Insira a chave da API antes de testar.' });
+      return;
+    }
+    setTestando(true);
+    setFeedback(null);
+    try {
+      const res = await testarIA(cfgIA);
+      if (res.ok) {
+        setFeedback({ tipo: 'sucesso', texto: res.mensagem });
+      } else {
+        setFeedback({ tipo: 'erro', texto: res.mensagem });
+      }
+    } catch (e) {
+      setFeedback({ tipo: 'erro', texto: 'Erro inesperado: ' + (e as Error).message });
+    } finally {
+      setTestando(false);
+    }
+  };
+
+  const handleSalvar = async () => {
+    const cfgIA = extrairConfigForm();
+    if (!cfgIA.chave) {
+      setFeedback({ tipo: 'erro', texto: 'A chave da API não pode estar em branco.' });
+      return;
+    }
+    setSalvando(true);
+    setFeedback(null);
+    try {
+      await salvarConfigIA(cfgIA);
+      setFeedback({ tipo: 'sucesso', texto: 'Configurações de IA salvas com sucesso!' });
+    } catch (e) {
+      setFeedback({ tipo: 'erro', texto: 'Erro ao salvar: ' + (e as Error).message });
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const handleRemoverChave = async () => {
+    if (!confirm('Deseja realmente remover a chave de IA salva?')) return;
+    await salvarConfigIA(null);
+    setChave('');
+    setFeedback({ tipo: 'sucesso', texto: 'Chave removida. O Salus continuará funcionando sem IA.' });
+  };
+
+  const handleExportarZip = async () => {
+    setExportando(true);
+    try {
+      await exportarDadosZip();
+    } catch (e) {
+      alert('Erro ao exportar: ' + (e as Error).message);
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  const handleConfirmarExclusao = async () => {
+    if (confirmacaoTexto !== 'EXCLUIR') return;
+    setExcluindo(true);
+    try {
+      await apagarConta();
+      setModalExcluirAberto(false);
+      alert('Todos os dados foram apagados com sucesso.');
+    } catch (e) {
+      alert('Erro ao apagar dados: ' + (e as Error).message);
+    } finally {
+      setExcluindo(false);
+    }
+  };
+
+  const temChaveAtiva = Boolean(config.provedor_ia?.chave);
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-texto flex items-center gap-2">
           <Settings size={24} className="text-salus-500" />
           Ajustes
         </h1>
         <p className="text-texto-secundario mt-1">
-          Configure IA, nuvem, exportação e privacidade.
+          Gerencie seu provedor de IA, armazenamento, exportação e dados da família.
         </p>
       </div>
 
-      {/* IA Provider */}
+      {/* IA Provider Card */}
       <Card>
         <button
           onClick={() => toggleSecao('ia')}
@@ -44,43 +226,170 @@ export function Ajustes() {
               <Key size={20} className="text-salus-400" />
             </div>
             <div>
-              <h2 className="font-semibold text-texto">Provedor de IA</h2>
-              <p className="text-xs text-texto-secundario">Opcional · Cadastre sua própria chave</p>
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-texto">Provedor de IA (BYOK)</h2>
+                {temChaveAtiva ? (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-salus-900/40 text-salus-400 font-medium flex items-center gap-1 border border-salus-500/30">
+                    <CheckCircle2 size={12} /> Configurado e Ativo
+                  </span>
+                ) : (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-fundo-elevado text-texto-secundario font-medium">
+                    Não configurado
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-texto-secundario">
+                Sua chave fica segura e isolada na sua conta. Há opções gratuitas.
+              </p>
             </div>
           </div>
           <ChevronRight size={20} className={`text-texto-secundario transition-transform ${secaoAberta === 'ia' ? 'rotate-90' : ''}`} />
         </button>
 
         {secaoAberta === 'ia' && (
-          <div className="mt-4 pt-4 border-t border-borda space-y-4">
-            <p className="text-sm text-texto-secundario">
-              O Salus funciona sem IA. Se quiser usar o Chat e a extração automática de documentos,
-              cadastre sua chave de um dos provedores abaixo. Há opções gratuitas.
+          <div className="mt-4 pt-4 border-t border-borda space-y-5">
+            <p className="text-sm text-texto-secundario leading-relaxed">
+              O Salus é 100% funcional offline. Se desejar usar o Chat e a leitura inteligente de exames e receitas,
+              selecione um provedor e insira sua chave.
             </p>
-            <div className="space-y-2">
-              {presets.map((preset) => (
-                <button
-                  key={preset.id}
-                  className="flex items-center gap-3 w-full p-3 rounded-[var(--radius-md)]
-                             border border-borda hover:border-salus-600/50 transition-all text-left"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-texto">{preset.nome}</span>
-                      {preset.gratis && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-salus-900/50 text-salus-400 font-medium">
+
+            {/* Presets List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {PRESETS.map((p) => {
+                const selecionado = presetSel === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => selecionarPreset(p)}
+                    type="button"
+                    className={`flex flex-col text-left p-3.5 rounded-[var(--radius-md)] border transition-all ${
+                      selecionado
+                        ? 'border-salus-500 bg-salus-950/20 ring-1 ring-salus-500'
+                        : 'border-borda hover:border-salus-600/40 bg-fundo-elevado/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="text-sm font-semibold text-texto flex items-center gap-1.5">
+                        {p.nome}
+                        {selecionado && <Check size={14} className="text-salus-400" />}
+                      </span>
+                      {p.gratis && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-salus-900/50 text-salus-400 font-medium border border-salus-500/20">
                           Grátis
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-texto-secundario">{preset.desc}</p>
-                  </div>
-                  <ChevronRight size={16} className="text-texto-secundario" />
-                </button>
-              ))}
+                    <p className="text-xs text-texto-secundario">{p.desc}</p>
+                  </button>
+                );
+              })}
             </div>
-            <Campo label="Chave da API" type="password" placeholder="Cole sua chave aqui" />
-            <Botao tamanho="sm">Salvar chave</Botao>
+
+            {/* API Key Input */}
+            <div className="space-y-2 pt-2">
+              <label className="block text-sm font-medium text-texto">
+                Chave da API ({PRESETS.find((p) => p.id === presetSel)?.nome})
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  type={mostrarSenha ? 'text' : 'password'}
+                  value={chave}
+                  onChange={(e) => setChave(e.target.value)}
+                  placeholder="Cole sua chave de API aqui"
+                  className="w-full px-3.5 py-2.5 rounded-[var(--radius-md)] bg-fundo-elevado border border-borda text-texto text-sm focus:outline-none focus:border-salus-500 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  className="absolute right-3 text-texto-secundario hover:text-texto"
+                >
+                  {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Advanced toggle */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setMostrarAvancado(!mostrarAvancado)}
+                className="text-xs text-salus-400 hover:underline flex items-center gap-1"
+              >
+                {mostrarAvancado ? 'Ocultar opções avançadas de modelo/URL' : 'Configurações avançadas (Modelo e URL Base)'}
+              </button>
+
+              {mostrarAvancado && (
+                <div className="mt-3 p-3 bg-fundo-elevado/50 rounded-[var(--radius-md)] border border-borda space-y-3 animate-fade-in">
+                  <Campo
+                    label="Nome do Modelo"
+                    value={modelo}
+                    onChange={(e) => setModelo(e.target.value)}
+                    placeholder="ex: gemini-1.5-flash, llama-3.3-70b-versatile"
+                  />
+                  {presetSel !== 'gemini' && (
+                    <Campo
+                      label="URL Base da API (OpenAI Compatible)"
+                      value={urlBase}
+                      onChange={(e) => setUrlBase(e.target.value)}
+                      placeholder="ex: https://api.groq.com/openai/v1"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Feedback Banner */}
+            {feedback && (
+              <div
+                className={`p-3 rounded-[var(--radius-md)] text-sm flex items-start gap-2.5 border ${
+                  feedback.tipo === 'sucesso'
+                    ? 'bg-salus-950/40 border-salus-500/40 text-salus-300'
+                    : 'bg-alerta-950/40 border-alerta-500/40 text-alerta-300'
+                }`}
+              >
+                {feedback.tipo === 'sucesso' ? (
+                  <CheckCircle2 size={18} className="text-salus-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle size={18} className="text-alerta-400 shrink-0 mt-0.5" />
+                )}
+                <span>{feedback.texto}</span>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-borda">
+              <Botao
+                type="button"
+                onClick={handleSalvar}
+                disabled={salvando || testando}
+                icone={salvando ? <RefreshCw size={16} className="animate-spin" /> : <Check size={16} />}
+              >
+                {salvando ? 'Salvando...' : 'Salvar Configurações'}
+              </Botao>
+
+              <Botao
+                type="button"
+                variante="secundario"
+                onClick={handleTestar}
+                disabled={testando || salvando}
+                icone={testando ? <RefreshCw size={16} className="animate-spin" /> : <Key size={16} />}
+              >
+                {testando ? 'Testando Conexão...' : 'Testar Conexão'}
+              </Botao>
+
+              {temChaveAtiva && (
+                <Botao
+                  type="button"
+                  variante="perigo"
+                  tamanho="sm"
+                  onClick={handleRemoverChave}
+                  icone={<Trash2 size={16} />}
+                  className="ml-auto"
+                >
+                  Remover Chave
+                </Botao>
+              )}
+            </div>
           </div>
         )}
       </Card>
@@ -97,7 +406,7 @@ export function Ajustes() {
             </div>
             <div>
               <h2 className="font-semibold text-texto">Google Drive</h2>
-              <p className="text-xs text-texto-secundario">Guardar documentos na sua nuvem</p>
+              <p className="text-xs text-texto-secundario">Armazenamento de exames e anexos na sua nuvem</p>
             </div>
           </div>
           <ChevronRight size={20} className={`text-texto-secundario transition-transform ${secaoAberta === 'drive' ? 'rotate-90' : ''}`} />
@@ -106,17 +415,16 @@ export function Ajustes() {
         {secaoAberta === 'drive' && (
           <div className="mt-4 pt-4 border-t border-borda space-y-3">
             <p className="text-sm text-texto-secundario">
-              Conecte seu Google Drive para guardar PDFs, fotos e áudios de exames.
-              O Salus cria uma pasta "Salus App" e só acessa os arquivos que ele mesmo criou.
+              O Salus armazena dados estruturados no banco e documentos originais na sua pasta do Google Drive (`Salus App`).
             </p>
-            <Botao variante="secundario" icone={<Cloud size={18} />}>
-              Conectar Google Drive
-            </Botao>
+            <div className="p-3 bg-fundo-elevado/40 rounded-[var(--radius-md)] border border-borda text-xs text-texto-secundario">
+              Os arquivos enviados pela Caixa de Entrada são salvos no seu Drive pessoal com isolamento total.
+            </div>
           </div>
         )}
       </Card>
 
-      {/* Export/Import */}
+      {/* Export / Import */}
       <Card>
         <button
           onClick={() => toggleSecao('dados')}
@@ -127,8 +435,8 @@ export function Ajustes() {
               <Download size={20} className="text-texto-secundario" />
             </div>
             <div>
-              <h2 className="font-semibold text-texto">Exportar / Importar</h2>
-              <p className="text-xs text-texto-secundario">Seus dados em formato Markdown</p>
+              <h2 className="font-semibold text-texto">Exportar / Backup dos Dados</h2>
+              <p className="text-xs text-texto-secundario">Baixe todos os dados em formato Markdown / ZIP</p>
             </div>
           </div>
           <ChevronRight size={20} className={`text-texto-secundario transition-transform ${secaoAberta === 'dados' ? 'rotate-90' : ''}`} />
@@ -137,33 +445,17 @@ export function Ajustes() {
         {secaoAberta === 'dados' && (
           <div className="mt-4 pt-4 border-t border-borda space-y-3">
             <p className="text-sm text-texto-secundario">
-              Exporte seus dados como um .zip com toda a árvore Markdown do Salus.
-              Legível por humano, compatível com o framework original.
+              Exporte todos os registros da sua família (membros, medicamentos, exames, vacinas e histórico) em um único arquivo `.zip` compatível com o Salus.
             </p>
             <div className="flex gap-2">
               <Botao
                 variante="secundario"
                 tamanho="sm"
-                icone={<Download size={16} />}
-                onClick={async () => {
-                  try {
-                    const blob = await exportarParaZip({
-                      membros: [],
-                      medicamentos: [],
-                      exames: [],
-                      vacinas: [],
-                      eventos: [],
-                    });
-                    baixarArquivo(blob, `salus-export-${new Date().toISOString().split('T')[0]}.zip`);
-                  } catch (e) {
-                    alert('Erro ao exportar: ' + (e as Error).message);
-                  }
-                }}
+                icone={exportando ? <RefreshCw size={16} className="animate-spin" /> : <Download size={16} />}
+                onClick={handleExportarZip}
+                disabled={exportando}
               >
-                Exportar .zip
-              </Botao>
-              <Botao variante="secundario" tamanho="sm" icone={<Upload size={16} />}>
-                Importar .zip
+                {exportando ? 'Gerando arquivo .zip...' : 'Exportar .zip Completo'}
               </Botao>
             </div>
           </div>
@@ -181,8 +473,8 @@ export function Ajustes() {
               <Shield size={20} className="text-texto-secundario" />
             </div>
             <div>
-              <h2 className="font-semibold text-texto">Privacidade</h2>
-              <p className="text-xs text-texto-secundario">Onde seus dados ficam e como apagar</p>
+              <h2 className="font-semibold text-texto">Privacidade e Exclusão</h2>
+              <p className="text-xs text-texto-secundario">Controle seus dados e apague sua conta quando quiser</p>
             </div>
           </div>
           <ChevronRight size={20} className={`text-texto-secundario transition-transform ${secaoAberta === 'privacidade' ? 'rotate-90' : ''}`} />
@@ -191,22 +483,73 @@ export function Ajustes() {
         {secaoAberta === 'privacidade' && (
           <div className="mt-4 pt-4 border-t border-borda space-y-4">
             <div className="text-sm text-texto-secundario space-y-2">
-              <p>• Dados estruturados ficam no banco do Salus, protegidos por login.</p>
-              <p>• Documentos originais ficam no seu Google Drive, numa pasta que só o Salus acessa.</p>
-              <p>• O mantenedor do app não vê nem armazena seus documentos originais.</p>
-              <p>• Quando a IA processa um documento, ele é enviado ao provedor de IA que <strong>você</strong> escolheu, com <strong>sua</strong> chave.</p>
+              <p>• Todos os seus dados são criptografados em trânsito e escopados pelo seu login.</p>
+              <p>• Suas chaves de IA nunca são compartilhadas nem enviadas a servidores de terceiros.</p>
             </div>
             <div className="pt-3 border-t border-borda">
-              <Botao variante="perigo" tamanho="sm" icone={<Trash2 size={16} />}>
-                Apagar minha conta e dados
+              <Botao
+                variante="perigo"
+                tamanho="sm"
+                icone={<Trash2 size={16} />}
+                onClick={() => setModalExcluirAberto(true)}
+              >
+                Apagar minha conta e todos os dados
               </Botao>
-              <p className="text-xs text-texto-secundario mt-2">
-                Antes de apagar, você poderá exportar todos os seus dados.
-              </p>
             </div>
           </div>
         )}
       </Card>
+
+      {/* Modal de Exclusão */}
+      {modalExcluirAberto && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-fundo-card border border-alerta-500/50 rounded-[var(--radius-lg)] p-6 max-w-md w-full space-y-4 shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-alerta-400 flex items-center gap-2">
+                <AlertTriangle size={20} />
+                Excluir Todos os Dados
+              </h3>
+              <button
+                onClick={() => setModalExcluirAberto(false)}
+                className="text-texto-secundario hover:text-texto"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-sm text-texto-secundario">
+              Esta ação é <strong>irreversível</strong>. Todos os membros, exames, medicamentos e histórico de saúde serão permanentemente apagados.
+            </p>
+            <p className="text-xs text-texto-secundario">
+              Para confirmar, digite <strong>EXCLUIR</strong> no campo abaixo:
+            </p>
+            <input
+              type="text"
+              value={confirmacaoTexto}
+              onChange={(e) => setConfirmacaoTexto(e.target.value)}
+              placeholder="Digite EXCLUIR"
+              className="w-full px-3 py-2 rounded-[var(--radius-md)] bg-fundo-elevado border border-borda text-texto text-sm focus:outline-none focus:border-alerta-500"
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <Botao
+                variante="secundario"
+                tamanho="sm"
+                onClick={() => setModalExcluirAberto(false)}
+              >
+                Cancelar
+              </Botao>
+              <Botao
+                variante="perigo"
+                tamanho="sm"
+                disabled={confirmacaoTexto !== 'EXCLUIR' || excluindo}
+                onClick={handleConfirmarExclusao}
+                icone={excluindo ? <RefreshCw size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              >
+                {excluindo ? 'Apagando...' : 'Confirmar Exclusão'}
+              </Botao>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
