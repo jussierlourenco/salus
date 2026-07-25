@@ -23,6 +23,7 @@ interface ConfigContexto {
   config: ConfigUsuario;
   carregando: boolean;
   salvarConfigIA: (configIA: ConfigProvedorIA | null) => Promise<void>;
+  salvarConfigDrive: (driveConfig: { token?: string; pasta_id?: string; conectado: boolean }) => Promise<void>;
   testarIA: (configIA: ConfigProvedorIA) => Promise<{ ok: boolean; mensagem: string }>;
   exportarDadosZip: () => Promise<void>;
   apagarConta: () => Promise<void>;
@@ -88,6 +89,26 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const salvarConfigDrive = async (driveConfig: { token?: string; pasta_id?: string; conectado: boolean }) => {
+    const nova: ConfigUsuario = {
+      ...config,
+      drive_refresh_token: driveConfig.token || undefined,
+      drive_pasta_raiz_id: driveConfig.pasta_id || undefined,
+      drive_conectado: driveConfig.conectado,
+    };
+    setConfig(nova);
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nova));
+    } catch (e) {
+      console.warn('[ConfigContext] Falha ao salvar no localStorage:', e);
+    }
+
+    if (usuario) {
+      await salvarConfigUsuario(usuario.uid, nova);
+    }
+  };
+
   const testarIA = async (configIA: ConfigProvedorIA) => {
     return await testarConexaoIA(configIA);
   };
@@ -128,6 +149,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         config,
         carregando,
         salvarConfigIA,
+        salvarConfigDrive,
         testarIA,
         exportarDadosZip,
         apagarConta,

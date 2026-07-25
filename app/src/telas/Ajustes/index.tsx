@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Card, Botao, Campo } from '../../componentes/ui';
+import { Card, Botao, Campo } from '../../core/ui';
 import {
   Settings, Key, Cloud, Download, Trash2,
   Shield, ChevronRight, CheckCircle2, AlertTriangle,
-  RefreshCw, Eye, EyeOff, Check, X
+  RefreshCw, Eye, EyeOff, Check, X, Folder
 } from 'lucide-react';
 import { useConfiguracao } from '../../core/config/ConfigContext';
+import { ServicoGoogleDrive } from '../../core/storage/drive';
 import type { ConfigProvedorIA, ProvedorIATipo } from '../../types/dominio';
 
 interface PresetItem {
@@ -66,19 +67,26 @@ const PRESETS: PresetItem[] = [
 ];
 
 export function Ajustes() {
-  const { config, salvarConfigIA, testarIA, exportarDadosZip, apagarConta } = useConfiguracao();
+  const { config, salvarConfigIA, salvarConfigDrive, testarIA, exportarDadosZip, apagarConta } = useConfiguracao();
 
   const [secaoAberta, setSecaoAberta] = useState<string | null>('ia');
 
   // Estado do formulário de IA
   const [presetSel, setPresetSel] = useState<string>('gemini');
   const [chave, setChave] = useState('');
-  const [modelo, setModelo] = useState('gemini-1.5-flash');
+  const [modelo, setModelo] = useState('gemini-2.0-flash');
   const [urlBase, setUrlBase] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarAvancado, setMostrarAvancado] = useState(false);
 
-  // Status de feedback
+  // Estado do formulário do Google Drive
+  const [driveToken, setDriveToken] = useState('');
+  const [drivePastaId, setDrivePastaId] = useState('Salus App');
+  const [testandoDrive, setTestandoDrive] = useState(false);
+  const [salvandoDrive, setSalvandoDrive] = useState(false);
+  const [feedbackDrive, setFeedbackDrive] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+
+  // Status de feedback de IA
   const [testando, setTestando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [exportando, setExportando] = useState(false);
@@ -89,14 +97,13 @@ export function Ajustes() {
   const [confirmacaoTexto, setConfirmacaoTexto] = useState('');
   const [excluindo, setExcluindo] = useState(false);
 
-  // Inicializa o formulário com a config salva
+  // Carrega configurações salvas na montagem
   useEffect(() => {
     if (config.provedor_ia) {
       setChave(config.provedor_ia.chave || '');
-      setModelo(config.provedor_ia.modelo || 'gemini-1.5-flash');
+      setModelo(config.provedor_ia.modelo || 'gemini-2.0-flash');
       setUrlBase(config.provedor_ia.url_base || '');
 
-      // Identifica o preset correspondente
       const encontrado = PRESETS.find((p) => {
         if (config.provedor_ia?.tipo === 'gemini' && p.tipo === 'gemini') return true;
         if (p.url_base && config.provedor_ia?.url_base === p.url_base) return true;
@@ -105,7 +112,14 @@ export function Ajustes() {
       if (encontrado) setPresetSel(encontrado.id);
       else setPresetSel('custom');
     }
-  }, [config]);
+
+    if (config.drive_refresh_token) {
+      setDriveToken(config.drive_refresh_token);
+    }
+    if (config.drive_pasta_raiz_id) {
+      setDrivePastaId(config.drive_pasta_raiz_id);
+    }
+  }, []);
 
   const toggleSecao = (id: string) => {
     setSecaoAberta(secaoAberta === id ? null : id);
@@ -164,7 +178,7 @@ export function Ajustes() {
     setFeedback(null);
     try {
       await salvarConfigIA(cfgIA);
-      setFeedback({ tipo: 'sucesso', texto: 'Configurações de IA salvas com sucesso!' });
+      setFeedback({ tipo: 'sucesso', texto: `Configurações de IA (${cfgIA.modelo}) salvas com sucesso no banco!` });
     } catch (e) {
       setFeedback({ tipo: 'erro', texto: 'Erro ao salvar: ' + (e as Error).message });
     } finally {
@@ -177,6 +191,48 @@ export function Ajustes() {
     await salvarConfigIA(null);
     setChave('');
     setFeedback({ tipo: 'sucesso', texto: 'Chave removida. O Salus continuará funcionando sem IA.' });
+  };
+
+  const handleSalvarDrive = async () => {
+    setSalvandoDrive(true);
+    setFeedbackDrive(null);
+    try {
+      await salvarConfigDrive({
+        token: driveToken.trim(),
+        pasta_id: drivePastaId.trim() || 'Salus App',
+        conectado: true,
+      });
+      setFeedbackDrive({ tipo: 'sucesso', texto: 'Configuração do Google Drive salva no banco de dados!' });
+    } catch (e) {
+      setFeedbackDrive({ tipo: 'erro', texto: 'Erro ao salvar Drive: ' + (e as Error).message });
+    } finally {
+      setSalvandoDrive(false);
+    }
+  };
+
+  const handleTestarDrive = async () => {
+    setTestandoDrive(true);
+    setFeedbackDrive(null);
+    try {
+      if (driveToken.trim()) {
+        const servico = new ServicoGoogleDrive(driveToken.trim());
+        await servico.obterOuCriarPastaRaiz();
+        setFeedbackDrive({ tipo: 'sucesso', texto: 'Conexão com Google Drive estabelecida e pasta verificada com sucesso!' });
+      } else {
+        setFeedbackDrive({ tipo: 'sucesso', texto: `Modo local ativo: Pasta configurada como "${drivePastaId || 'Salus App'}".` });
+      }
+    } catch (e) {
+      setFeedbackDrive({ tipo: 'erro', texto: 'Erro ao conectar ao Google Drive: ' + (e as Error).message });
+    } finally {
+      setTestandoDrive(false);
+    }
+  };
+
+  const handleDesconectarDrive = async () => {
+    if (!confirm('Deseja desconectar o Google Drive?')) return;
+    await salvarConfigDrive({ token: '', pasta_id: '', conectado: false });
+    setDriveToken('');
+    setFeedbackDrive({ tipo: 'sucesso', texto: 'Google Drive desconectado.' });
   };
 
   const handleExportarZip = async () => {
@@ -205,6 +261,7 @@ export function Ajustes() {
   };
 
   const temChaveAtiva = Boolean(config.provedor_ia?.chave);
+  const driveConectado = Boolean(config.drive_conectado);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl">
@@ -214,7 +271,7 @@ export function Ajustes() {
           Ajustes
         </h1>
         <p className="text-texto-secundario mt-1">
-          Gerencie seu provedor de IA, armazenamento, exportação e dados da família.
+          Gerencie seu provedor de IA, Google Drive, backups e dados da família.
         </p>
       </div>
 
@@ -327,7 +384,7 @@ export function Ajustes() {
                     label="Nome do Modelo"
                     value={modelo}
                     onChange={(e) => setModelo(e.target.value)}
-                    placeholder="ex: gemini-1.5-flash, llama-3.3-70b-versatile"
+                    placeholder="ex: gemini-2.0-flash, llama-3.3-70b-versatile"
                   />
                   {presetSel !== 'gemini' && (
                     <Campo
@@ -367,7 +424,7 @@ export function Ajustes() {
                 disabled={salvando || testando}
                 icone={salvando ? <RefreshCw size={16} className="animate-spin" /> : <Check size={16} />}
               >
-                {salvando ? 'Salvando...' : 'Salvar Configurações'}
+                {salvando ? 'Salvando no banco...' : 'Salvar Configurações'}
               </Botao>
 
               <Botao
@@ -397,7 +454,7 @@ export function Ajustes() {
         )}
       </Card>
 
-      {/* Google Drive */}
+      {/* Google Drive Card */}
       <Card>
         <button
           onClick={() => toggleSecao('drive')}
@@ -408,26 +465,103 @@ export function Ajustes() {
               <Cloud size={20} className="text-alerta-400" />
             </div>
             <div>
-              <h2 className="font-semibold text-texto">Google Drive</h2>
-              <p className="text-xs text-texto-secundario">Armazenamento de exames e anexos na sua nuvem</p>
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-texto">Google Drive</h2>
+                {driveConectado ? (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-salus-900/40 text-salus-400 font-medium flex items-center gap-1 border border-salus-500/30">
+                    <CheckCircle2 size={12} /> Conectado ({drivePastaId})
+                  </span>
+                ) : (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-fundo-elevado text-texto-secundario font-medium">
+                    Desconectado
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-texto-secundario">Armazenamento de exames e anexos na sua nuvem pessoal</p>
             </div>
           </div>
           <ChevronRight size={20} className={`text-texto-secundario transition-transform ${secaoAberta === 'drive' ? 'rotate-90' : ''}`} />
         </button>
 
         {secaoAberta === 'drive' && (
-          <div className="mt-4 pt-4 border-t border-borda space-y-3">
-            <p className="text-sm text-texto-secundario">
-              O Salus armazena dados estruturados no banco e documentos originais na sua pasta do Google Drive (`Salus App`).
+          <div className="mt-4 pt-4 border-t border-borda space-y-4">
+            <p className="text-sm text-texto-secundario leading-relaxed">
+              O Salus armazena documentos e arquivos originais na pasta da sua nuvem pessoal (`Salus App`).
             </p>
-            <div className="p-3 bg-fundo-elevado/40 rounded-[var(--radius-md)] border border-borda text-xs text-texto-secundario">
-              Os arquivos enviados pela Caixa de Entrada são salvos no seu Drive pessoal com isolamento total.
+
+            <div className="space-y-3 p-4 bg-fundo-elevado/30 border border-borda rounded-[var(--radius-md)]">
+              <Campo
+                label="ID ou Nome da Pasta Raiz no Drive"
+                value={drivePastaId}
+                onChange={(e) => setDrivePastaId(e.target.value)}
+                placeholder="ex: Salus App"
+                icone={<Folder size={18} />}
+              />
+
+              <Campo
+                label="Token OAuth / Refresh Token (Opcional)"
+                type="password"
+                value={driveToken}
+                onChange={(e) => setDriveToken(e.target.value)}
+                placeholder="Insira um token de acesso para integrar ao seu Google Drive"
+              />
+            </div>
+
+            {feedbackDrive && (
+              <div
+                className={`p-3 rounded-[var(--radius-md)] text-sm flex items-start gap-2.5 border ${
+                  feedbackDrive.tipo === 'sucesso'
+                    ? 'bg-salus-950/40 border-salus-500/40 text-salus-300'
+                    : 'bg-alerta-950/40 border-alerta-500/40 text-alerta-300'
+                }`}
+              >
+                {feedbackDrive.tipo === 'sucesso' ? (
+                  <CheckCircle2 size={18} className="text-salus-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle size={18} className="text-alerta-400 shrink-0 mt-0.5" />
+                )}
+                <span>{feedbackDrive.texto}</span>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-borda">
+              <Botao
+                type="button"
+                onClick={handleSalvarDrive}
+                disabled={salvandoDrive || testandoDrive}
+                icone={salvandoDrive ? <RefreshCw size={16} className="animate-spin" /> : <Cloud size={16} />}
+              >
+                {salvandoDrive ? 'Salvando...' : 'Salvar Configuração do Drive'}
+              </Botao>
+
+              <Botao
+                type="button"
+                variante="secundario"
+                onClick={handleTestarDrive}
+                disabled={testandoDrive || salvandoDrive}
+                icone={testandoDrive ? <RefreshCw size={16} className="animate-spin" /> : <Folder size={16} />}
+              >
+                {testandoDrive ? 'Testando Drive...' : 'Testar Conexão com Drive'}
+              </Botao>
+
+              {driveConectado && (
+                <Botao
+                  type="button"
+                  variante="perigo"
+                  tamanho="sm"
+                  onClick={handleDesconectarDrive}
+                  icone={<Trash2 size={16} />}
+                  className="ml-auto"
+                >
+                  Desconectar
+                </Botao>
+              )}
             </div>
           </div>
         )}
       </Card>
 
-      {/* Export / Import */}
+      {/* Export / Backup Card */}
       <Card>
         <button
           onClick={() => toggleSecao('dados')}
@@ -448,7 +582,7 @@ export function Ajustes() {
         {secaoAberta === 'dados' && (
           <div className="mt-4 pt-4 border-t border-borda space-y-3">
             <p className="text-sm text-texto-secundario">
-              Exporte todos os registros da sua família (membros, medicamentos, exames, vacinas e histórico) em um único arquivo `.zip` compatível com o Salus.
+              Exporte todos os registros da sua família em um único arquivo `.zip` compatível com o Salus.
             </p>
             <div className="flex gap-2">
               <Botao
@@ -465,7 +599,7 @@ export function Ajustes() {
         )}
       </Card>
 
-      {/* Privacy */}
+      {/* Privacy Card */}
       <Card>
         <button
           onClick={() => toggleSecao('privacidade')}
