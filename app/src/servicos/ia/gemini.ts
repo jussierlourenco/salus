@@ -5,7 +5,6 @@
 
 import type { ProvedorIA, MensagemChat, RespostaChat } from './interface';
 import type { PropostaExtracao } from '../../types/dominio';
-
 import { validarPropostaIA } from './validacao';
 
 export class ProvedorGemini implements ProvedorIA {
@@ -18,7 +17,7 @@ export class ProvedorGemini implements ProvedorIA {
     audio: true,
   };
 
-  constructor(chave: string, modelo = 'gemini-1.5-flash') {
+  constructor(chave: string, modelo = 'gemini-2.0-flash') {
     this.chave = chave;
     this.modelo = modelo;
   }
@@ -31,6 +30,62 @@ export class ProvedorGemini implements ProvedorIA {
       binary += String.fromCharCode(bytes[i]);
     }
     return window.btoa(binary);
+  }
+
+  private formatarNomeModelo(mod: string): string {
+    let m = (mod || 'gemini-2.0-flash').trim();
+    if (m.startsWith('models/')) {
+      m = m.replace(/^models\//, '');
+    }
+    return m;
+  }
+
+  private obterListaModelosCandidatos(modeloInicial: string): string[] {
+    const limpo = this.formatarNomeModelo(modeloInicial);
+    const candidatos = [limpo, 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+    // Retorna lista única preservando a ordem
+    return Array.from(new Set(candidatos));
+  }
+
+  private async requisitarComFallback(
+    payload: unknown,
+    origem: string
+  ): Promise<any> {
+    const modelosParaTestar = this.obterListaModelosCandidatos(this.modelo);
+    let ultimoErro: Error | null = null;
+
+    for (const mod of modelosParaTestar) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${this.chave}`;
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          return await res.json();
+        }
+
+        const errText = await res.text();
+        // Se for 404 (modelo não encontrado), continua o loop para testar o próximo candidato
+        if (res.status === 404 && modelosParaTestar.length > 1) {
+          console.warn(`[Gemini] Modelo ${mod} retornou 404, tentando próximo candidato...`);
+          ultimoErro = new Error(`Erro no ${origem} (${res.status}): ${errText}`);
+          continue;
+        }
+
+        throw new Error(`Erro no ${origem} (${res.status}): ${errText}`);
+      } catch (err) {
+        ultimoErro = err instanceof Error ? err : new Error(String(err));
+        if (err instanceof Error && err.message.includes('404')) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw ultimoErro || new Error(`Erro no ${origem}: Nenhum modelo Gemini respondeu.`);
   }
 
   async extrairDocumento(
@@ -64,8 +119,6 @@ Você deve extrair informações clínicas e retornar EXATAMENTE um JSON no segu
 }
 Retorne APENAS o JSON válido sem blocos de código adicionais fora de json.`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelo}:generateContent?key=${this.chave}`;
-
     const payload = {
       contents: [
         {
@@ -85,26 +138,13 @@ Retorne APENAS o JSON válido sem blocos de código adicionais fora de json.`;
       },
     };
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Erro na API Gemini (${res.status}): ${errText}`);
-    }
-
-    const data = await res.json();
+    const data = await this.requisitarComFallback(payload, 'Extrator Gemini');
     const textoResposta = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
 
     return validarPropostaIA(textoResposta);
   }
 
   async chat(mensagens: MensagemChat[], contexto: string): Promise<RespostaChat> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelo}:generateContent?key=${this.chave}`;
-
     const systemInstruction = `Você é o assistente Salus de saúde da família.
 Contexto atual da família:
 ${contexto}
@@ -124,18 +164,7 @@ Diretrizes:
       contents,
     };
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Erro no Chat Gemini (${res.status}): ${errText}`);
-    }
-
-    const data = await res.json();
+    const data = await this.requisitarComFallback(payload, 'Chat Gemini');
     const resposta = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
     return { conteudo: resposta };

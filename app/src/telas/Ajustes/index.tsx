@@ -23,7 +23,7 @@ const PRESETS: PresetItem[] = [
     id: 'gemini',
     nome: 'Google Gemini',
     tipo: 'gemini',
-    modelo_padrao: 'gemini-1.5-flash',
+    modelo_padrao: 'gemini-2.0-flash',
     gratis: true,
     desc: 'Recomendado · Excelente para PDFs, fotos de exames e chat',
   },
