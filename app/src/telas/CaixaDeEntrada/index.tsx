@@ -337,6 +337,14 @@ export function CaixaDeEntrada() {
           // Falha no download não interrompe o fluxo
         }
 
+        // Deriva data_evento do documento
+        const datasEncontradas = [
+          ...(proposta.proposta.exames ?? []).map((e) => e.data),
+          ...(proposta.proposta.vacinas ?? []).map((v) => v.aplicada_em),
+          ...(proposta.proposta.eventos ?? []).map((ev) => ev.data),
+        ].filter(Boolean) as string[];
+        const dataEvento = datasEncontradas.sort()[0] ?? undefined;
+
         // Registra o item processado na caixa de entrada
         await salvarCaixaEntrada(uid, {
           nome_arquivo: proposta.arquivo.name,
@@ -345,6 +353,7 @@ export function CaixaDeEntrada() {
           proposta: proposta.proposta,
           storage_id: arquivoId,
           storage_tipo: 'indexeddb',
+          data_evento: dataEvento,
         });
       } catch (err) {
         erros.push(`${proposta.arquivo.name}: ${err instanceof Error ? err.message : 'Erro ao salvar'}`);

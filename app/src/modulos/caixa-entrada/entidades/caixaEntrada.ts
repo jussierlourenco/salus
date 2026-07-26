@@ -38,6 +38,8 @@ export interface CaixaEntradaItem {
   storage_id?: string;
   /** 'indexeddb' | 'drive' | 'manual' */
   storage_tipo?: string;
+  /** Data real do evento clínico (extraída do documento) */
+  data_evento?: string;
   criado_em: string;
   atualizado_em: string;
 }

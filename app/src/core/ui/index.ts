@@ -7,3 +7,4 @@ export { EstadoVazio } from './EstadoVazio';
 export { PainelDeProposta } from './PainelDeProposta';
 export { useTema } from './useTema';
 export type { Tema } from './useTema';
+export { VisualizadorDocumento } from './VisualizadorDocumento';

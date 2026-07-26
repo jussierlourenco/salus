@@ -115,6 +115,7 @@ export interface CaixaEntradaItem {
   proposta?: PropostaExtracao;
   storage_id?: string;
   storage_tipo?: string;
+  data_evento?: string;
   criado_em: string;
   atualizado_em: string;
 }
