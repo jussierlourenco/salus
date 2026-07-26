@@ -27,7 +27,7 @@ const PRESETS: PresetItem[] = [
     id: 'gemini',
     nome: 'Google Gemini',
     tipo: 'gemini',
-    modelo_padrao: 'gemini-2.0-flash',
+    modelo_padrao: 'gemini-2.5-flash',
     gratis: true,
     desc: 'Recomendado · Excelente para PDFs, fotos de exames e chat',
     url_obter_chave: 'https://aistudio.google.com/apikey',
@@ -47,7 +47,7 @@ const PRESETS: PresetItem[] = [
     nome: 'OpenRouter',
     tipo: 'openai_compat',
     url_base: 'https://openrouter.ai/api/v1',
-    modelo_padrao: 'google/gemini-2.0-flash-lite-001',
+    modelo_padrao: 'google/gemini-2.5-flash-lite-001',
     gratis: true,
     desc: 'Catálogo variado com vários modelos gratuitos',
     url_obter_chave: 'https://openrouter.ai/settings/keys',
@@ -82,7 +82,7 @@ export function Ajustes() {
   // Estado do formulário de IA
   const [presetSel, setPresetSel] = useState<string>('gemini');
   const [chave, setChave] = useState('');
-  const [modelo, setModelo] = useState('gemini-2.0-flash');
+  const [modelo, setModelo] = useState('gemini-2.5-flash');
   const [urlBase, setUrlBase] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarAvancado, setMostrarAvancado] = useState(false);
@@ -108,7 +108,7 @@ export function Ajustes() {
   useEffect(() => {
     if (config.provedor_ia) {
       setChave(config.provedor_ia.chave || '');
-      setModelo(config.provedor_ia.modelo || 'gemini-2.0-flash');
+      setModelo(config.provedor_ia.modelo || 'gemini-2.5-flash');
       setUrlBase(config.provedor_ia.url_base || '');
 
       const encontrado = PRESETS.find((p) => {
@@ -142,7 +142,7 @@ export function Ajustes() {
     const res: ConfigProvedorIA = {
       tipo,
       chave: chave.trim(),
-      modelo: modelo.trim() || (preset ? preset.modelo_padrao : 'gemini-2.0-flash'),
+      modelo: modelo.trim() || (preset ? preset.modelo_padrao : 'gemini-2.5-flash'),
     };
     if (urlBase.trim()) {
       res.url_base = urlBase.trim();
@@ -388,7 +388,7 @@ export function Ajustes() {
                     label="Nome do Modelo"
                     value={modelo}
                     onChange={(e) => setModelo(e.target.value)}
-                    placeholder="ex: gemini-2.0-flash, llama-3.3-70b-versatile"
+                    placeholder="ex: gemini-2.5-flash, llama-3.3-70b-versatile"
                   />
                   {presetSel !== 'gemini' && (
                     <Campo

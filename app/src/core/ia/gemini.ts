@@ -12,7 +12,7 @@ export class ProvedorGemini implements ProvedorIA {
     audio: true,
   };
 
-  constructor(chave: string, modelo = 'gemini-2.0-flash') {
+  constructor(chave: string, modelo = 'gemini-2.5-flash') {
     this.chave = chave;
     this.modelo = modelo;
   }
@@ -28,7 +28,7 @@ export class ProvedorGemini implements ProvedorIA {
   }
 
   private formatarNomeModelo(mod: string): string {
-    let m = (mod || 'gemini-2.0-flash').trim();
+    let m = (mod || 'gemini-2.5-flash').trim();
     if (m.startsWith('models/')) {
       m = m.replace(/^models\//, '');
     }
@@ -37,7 +37,7 @@ export class ProvedorGemini implements ProvedorIA {
 
   private obterListaModelosCandidatos(modeloInicial: string): string[] {
     const limpo = this.formatarNomeModelo(modeloInicial);
-    const candidatos = [limpo, 'gemini-1.5-flash-latest', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+    const candidatos = [limpo, 'gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.1-flash-lite'];
     return Array.from(new Set(candidatos));
   }
 

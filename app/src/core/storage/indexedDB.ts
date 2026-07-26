@@ -44,24 +44,22 @@ export async function salvarArquivoLocal(
   arquivo: File
 ): Promise<void> {
   const db = await abrirBanco(uid);
+  const dados = await arquivo.arrayBuffer();
+  const registro: RegistroArquivo = {
+    id,
+    nome: arquivo.name,
+    mime: arquivo.type,
+    tamanho: arquivo.size,
+    dados,
+    criado_em: new Date().toISOString(),
+  };
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction('arquivos', 'readwrite');
     const store = tx.objectStore('arquivos');
-
-    arquivo.arrayBuffer().then((dados) => {
-      const registro: RegistroArquivo = {
-        id,
-        nome: arquivo.name,
-        mime: arquivo.type,
-        tamanho: arquivo.size,
-        dados,
-        criado_em: new Date().toISOString(),
-      };
-
-      const req = store.put(registro);
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject(new Error('Falha ao salvar arquivo local: ' + req.error?.message));
-    });
+    const req = store.put(registro);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(new Error('Falha ao salvar arquivo local: ' + req.error?.message));
   });
 }
 

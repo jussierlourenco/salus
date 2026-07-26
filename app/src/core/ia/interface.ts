@@ -52,7 +52,7 @@ export function criarProvedor(config?: ConfigProvedorIA): ProvedorIA {
   }
 
   if (config.tipo === 'gemini') {
-    return new ProvedorGemini(config.chave, config.modelo || 'gemini-2.0-flash');
+    return new ProvedorGemini(config.chave, config.modelo || 'gemini-2.5-flash');
   }
 
   return new ProvedorOpenAICompat(config.chave, config.modelo, config.url_base);
