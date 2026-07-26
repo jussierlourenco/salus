@@ -173,6 +173,22 @@ export interface Familia {
   atualizado_em: string;
 }
 
+// ── Cadastro / Admin de Usuários ──
+
+export type StatusUsuarioSalus = 'pending' | 'approved' | 'denied';
+
+export interface UsuarioSalus {
+  uid: string;
+  email: string;
+  nome?: string;
+  foto_url?: string;
+  status: StatusUsuarioSalus;
+  admin: boolean;
+  criado_em: string;
+  aprovado_em?: string;
+  aprovado_por?: string;
+}
+
 // ── Alertas do Painel ──
 
 export type NivelAlerta = 'vencido' | 'vencendo_30d' | 'proximo_90d';

@@ -9,6 +9,7 @@ import {
   Users,
   Sun,
   Moon,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useTema } from './useTema';
@@ -42,8 +43,11 @@ function NavItem({ to, label, icone: Icone }: typeof links[number]) {
 }
 
 export function AppShell() {
-  const { usuario, sair } = useAuth();
+  const { usuario, usuarioSalus, sair } = useAuth();
   const { tema, alternarTema } = useTema();
+  const isAdmin = usuarioSalus?.admin === true;
+
+  const adminLink = { to: '/admin/usuarios', label: 'Admin', icone: Shield };
 
   return (
     <div className="flex flex-col lg:flex-row h-dvh">
@@ -65,6 +69,7 @@ export function AppShell() {
           {links.map((link) => (
             <NavItem key={link.to} {...link} />
           ))}
+          {isAdmin && <NavItem key={adminLink.to} {...adminLink} />}
         </nav>
 
         {/* Tema */}
@@ -131,7 +136,7 @@ export function AppShell() {
         {/* ── Bottom Nav (in document flow — no overlap) ── */}
         <nav className="lg:hidden bg-fundo">
           <div className="glass border-t border-borda flex items-center justify-around px-1 py-1 pb-[env(safe-area-inset-bottom,0px)]">
-            {links.map(({ to, label, icone: Icone }) => (
+            {[...links, ...(isAdmin ? [adminLink] : [])].map(({ to, label, icone: Icone }) => (
               <NavLink
                 key={to}
                 to={to}
