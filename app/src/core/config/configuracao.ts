@@ -16,6 +16,7 @@ export const CONFIG_PADRAO: ConfigUsuario = {
     disclaimer_clinico: true,
     dados_terceiros: true,
   },
+  versao_consentimento: 0,
 };
 
 const MODELOS_DEPRECIADOS = [

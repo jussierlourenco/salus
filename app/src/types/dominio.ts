@@ -160,6 +160,8 @@ export interface ConfigUsuario {
     disclaimer_clinico: boolean;
     dados_terceiros: boolean;
   };
+  versao_consentimento: number;
+  data_consentimento?: string;
   provedor_ia?: ConfigProvedorIA;
   drive_pasta_raiz_id?: string;
   drive_conectado?: boolean;

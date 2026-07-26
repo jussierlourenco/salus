@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, AuthProvider } from './core/auth/AuthProvider';
-import { ConfigProvider } from './core/config/ConfigContext';
+import { ConfigProvider, useConfiguracao } from './core/config/ConfigContext';
 import { AppShell } from './core/ui/AppShell';
 import { Carregando } from './core/ui';
 import { Login } from './telas/Login';
@@ -13,6 +13,9 @@ import { Chat } from './telas/Chat';
 import { Ajustes } from './telas/Ajustes';
 import { AguardandoAprovacao } from './telas/AguardandoAprovacao';
 import { AdminUsuarios } from './telas/AdminUsuarios';
+import { ConsentimentoLGPD } from './telas/ConsentimentoLGPD';
+
+const VERSAO_CONSENTIMENTO = 1;
 
 function GuardaAuth({ children }: { children: React.ReactNode }) {
   const { usuario, carregando } = useAuth();
@@ -32,6 +35,15 @@ function GuardaAprovacao({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function GuardaLGPD({ children }: { children: React.ReactNode }) {
+  const { config, carregando: configCarregando } = useConfiguracao();
+  if (configCarregando) return <Carregando texto="Carregando configurações..." tamanho="lg" />;
+  if (config.versao_consentimento < VERSAO_CONSENTIMENTO) {
+    return <Navigate to="/consentimento-lgpd" replace />;
+  }
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -40,10 +52,15 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/aguardando" element={<GuardaAuth><AguardandoAprovacao /></GuardaAuth>} />
-            <Route path="/onboarding" element={
-              <GuardaAuth><GuardaAprovacao><Onboarding /></GuardaAprovacao></GuardaAuth>
+            <Route path="/consentimento-lgpd" element={
+              <GuardaAuth><GuardaAprovacao><ConsentimentoLGPD /></GuardaAprovacao></GuardaAuth>
             } />
-            <Route element={<GuardaAuth><GuardaAprovacao><AppShell /></GuardaAprovacao></GuardaAuth>}>
+            <Route path="/onboarding" element={
+              <GuardaAuth><GuardaAprovacao><GuardaLGPD><Onboarding /></GuardaLGPD></GuardaAprovacao></GuardaAuth>
+            } />
+            <Route element={
+              <GuardaAuth><GuardaAprovacao><GuardaLGPD><AppShell /></GuardaLGPD></GuardaAprovacao></GuardaAuth>
+            }>
               <Route index element={<Painel />} />
               <Route path="membros" element={<Membros />} />
               <Route path="membro/:id" element={<Perfil />} />

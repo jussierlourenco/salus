@@ -499,11 +499,41 @@ export function Ajustes() {
 
         {secaoAberta === 'privacidade' && (
           <div className="mt-4 pt-4 border-t border-borda space-y-4">
-            <div className="text-sm text-texto-secundario space-y-2">
-              <p>• Todos os seus dados são criptografados em trânsito e escopados pelo seu login.</p>
-              <p>• Suas chaves de IA nunca são compartilhadas nem enviadas a servidores de terceiros.</p>
+            <div className="text-sm text-texto-secundario space-y-3">
+              <p className="text-texto font-semibold text-base">LGPD — Lei Geral de Proteção de Dados</p>
+
+              <div className="p-3 rounded-[var(--radius-md)] bg-fundo/50 border border-borda/50">
+                <p className="font-medium text-texto mb-1">Base legal: Consentimento (Art. 7º, I e Art. 11, II)</p>
+                <p>Seus dados de saúde são tratados com consentimento específico. Você pode revogá-lo a qualquer momento.</p>
+              </div>
+
+              <div className="p-3 rounded-[var(--radius-md)] bg-fundo/50 border border-borda/50">
+                <p className="font-medium text-texto mb-1">Seus direitos (LGPD Art. 18)</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Confirmar se tratamos seus dados</li>
+                  <li>Acessar, corrigir ou eliminar seus dados</li>
+                  <li>Exportar uma cópia (botão Exportar .zip)</li>
+                  <li>Revogar o consentimento e apagar a conta</li>
+                </ul>
+              </div>
+
+              <div className="p-3 rounded-[var(--radius-md)] bg-fundo/50 border border-borda/50">
+                <p className="font-medium text-texto mb-1">Encarregado (DPO)</p>
+                <p>Jussier Silva — <span className="text-salus-400">jussier.silva@gmail.com</span></p>
+              </div>
+
+              <div className="p-3 rounded-[var(--radius-md)] bg-fundo/50 border border-borda/50">
+                <p className="font-medium text-texto mb-1">Tempo de retenção</p>
+                <p>Os dados são mantidos até que você revogue o consentimento ou solicite a exclusão.
+                   Chaves de API de IA são armazenadas com criptografia em trânsito e em repouso.</p>
+              </div>
             </div>
-            <div className="pt-3 border-t border-borda">
+
+            <div className="pt-3 border-t border-borda flex flex-col gap-2">
+              <p className="text-xs text-texto-secundario">
+                Versão do consentimento: {config.versao_consentimento}
+                {config.data_consentimento && <> · Aceito em {new Date(config.data_consentimento).toLocaleDateString('pt-BR')}</>}
+              </p>
               <Botao
                 variante="perigo"
                 tamanho="sm"
