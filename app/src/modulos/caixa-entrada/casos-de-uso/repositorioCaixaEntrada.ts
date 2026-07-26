@@ -18,12 +18,12 @@ export async function listarCaixaEntrada(uid: string): Promise<CaixaEntradaItem[
 export async function salvarCaixaEntrada(uid: string, item: Partial<CaixaEntradaItem> & { id?: string }): Promise<string> {
   const id = item.id ?? doc(colecaoCaixaEntrada(uid)).id;
   const agora = new Date().toISOString();
-  const dados = {
+  const dados = JSON.parse(JSON.stringify({
     ...item,
     id,
     criado_em: item.criado_em ?? agora,
     atualizado_em: agora,
-  };
+  }));
   await setDoc(docCaixaEntrada(uid, id), dados, { merge: true });
   return id;
 }

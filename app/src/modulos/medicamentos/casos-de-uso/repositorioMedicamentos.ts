@@ -20,12 +20,12 @@ export async function listarMedicamentos(uid: string, membroId?: string): Promis
 export async function salvarMedicamento(uid: string, med: Partial<Medicamento> & { id?: string }): Promise<string> {
   const id = med.id ?? doc(colecaoMedicamentos(uid)).id;
   const agora = new Date().toISOString();
-  const dados = {
+  const dados = JSON.parse(JSON.stringify({
     ...med,
     id,
     criado_em: med.criado_em ?? agora,
     atualizado_em: agora,
-  };
+  }));
   await setDoc(docMedicamento(uid, id), dados, { merge: true });
   return id;
 }

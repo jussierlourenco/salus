@@ -63,11 +63,11 @@ export async function listarEventos(uid: string, membroId?: string): Promise<Eve
 export async function salvarEvento(uid: string, evento: Partial<Evento> & { id?: string }): Promise<string> {
   const id = evento.id ?? doc(colecaoEventos(uid)).id;
   const agora = new Date().toISOString();
-  const dados = {
+  const dados = JSON.parse(JSON.stringify({
     ...evento,
     id,
     criado_em: evento.criado_em ?? agora,
-  };
+  }));
   await setDoc(doc(db, 'usuarios', uid, 'eventos', id), dados, { merge: true });
   return id;
 }

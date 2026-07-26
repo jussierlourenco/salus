@@ -25,12 +25,12 @@ export async function buscarMembro(uid: string, membroId: string): Promise<Membr
 export async function salvarMembro(uid: string, membro: Partial<Membro> & { id?: string }): Promise<string> {
   const id = membro.id ?? doc(colecaoMembros(uid)).id;
   const agora = new Date().toISOString();
-  const dados = {
+  const dados = JSON.parse(JSON.stringify({
     ...membro,
     id,
     criado_em: membro.criado_em ?? agora,
     atualizado_em: agora,
-  };
+  }));
   await setDoc(docMembro(uid, id), dados, { merge: true });
   return id;
 }

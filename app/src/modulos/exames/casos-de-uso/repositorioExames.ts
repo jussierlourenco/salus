@@ -20,11 +20,11 @@ export async function listarExames(uid: string, membroId?: string): Promise<Exam
 export async function salvarExame(uid: string, exame: Partial<Exame> & { id?: string }): Promise<string> {
   const id = exame.id ?? doc(colecaoExames(uid)).id;
   const agora = new Date().toISOString();
-  const dados = {
+  const dados = JSON.parse(JSON.stringify({
     ...exame,
     id,
     criado_em: exame.criado_em ?? agora,
-  };
+  }));
   await setDoc(docExame(uid, id), dados, { merge: true });
   return id;
 }

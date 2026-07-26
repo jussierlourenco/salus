@@ -20,11 +20,11 @@ export async function listarVacinas(uid: string, membroId?: string): Promise<Vac
 export async function salvarVacina(uid: string, vacina: Partial<Vacina> & { id?: string }): Promise<string> {
   const id = vacina.id ?? doc(colecaoVacinas(uid)).id;
   const agora = new Date().toISOString();
-  const dados = {
+  const dados = JSON.parse(JSON.stringify({
     ...vacina,
     id,
     criado_em: vacina.criado_em ?? agora,
-  };
+  }));
   await setDoc(docVacina(uid, id), dados, { merge: true });
   return id;
 }
