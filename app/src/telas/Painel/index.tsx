@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Badge, Carregando, VisualizadorDocumento } from '../../core/ui';
 import {
   Activity, Pill, AlertTriangle, Calendar, TrendingUp, Heart, Users, Clock,
-  CheckCircle2, FileText, Inbox, Image, Mic, Stethoscope,
+  CheckCircle2, FileText, Inbox, Image, Mic, Stethoscope, Search,
   ChevronRight, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -16,6 +16,7 @@ import { listarCaixaEntrada, atualizarCaixaEntrada } from '../../modulos/caixa-e
 import { listarEventos } from '../../core/database/repositorio';
 import { PainelTendencias } from '../../modulos/tendencias/PainelTendencias';
 import { DossieMedico } from '../../modulos/dossie/DossieMedico';
+import { BuscaSemantica } from '../../modulos/busca-semantica/BuscaSemantica';
 import { calcularAlertas } from '../../dominio/alertas';
 import type { Membro } from '../../modulos/membros/entidades/membro';
 import type { Medicamento } from '../../modulos/medicamentos/entidades/medicamento';
@@ -25,7 +26,7 @@ import type { Evento } from '../../core/database/repositorio';
 import type { CaixaEntradaItem } from '../../modulos/caixa-entrada/entidades/caixaEntrada';
 import type { Alerta } from '../../types/dominio';
 
-type SecaoAberta = 'membros' | 'medicamentos' | 'alertas' | 'tendencias' | 'dossie' | null;
+type SecaoAberta = 'membros' | 'medicamentos' | 'alertas' | 'tendencias' | 'dossie' | 'busca' | null;
 
 const badgeVariante = { vencido: 'vencido' as const, vencendo_30d: 'alerta' as const, proximo_90d: 'neutro' as const };
 const badgeTexto = { vencido: 'Vencido', vencendo_30d: 'Vence em 30d', proximo_90d: 'Próximos 90d' };
@@ -212,7 +213,7 @@ export function Painel() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
         <button onClick={() => toggleSecao('membros')} className="text-left">
           <Card hover padding="sm" className={secaoAberta === 'membros' ? 'ring-2 ring-salus-500/40' : ''}>
             <div className="flex items-center gap-3">
@@ -250,6 +251,14 @@ export function Painel() {
             <div className="flex items-center gap-3">
               <Stethoscope size={22} className="text-salus-400 shrink-0" />
               <div><p className="text-2xl font-bold text-texto">{eventos.length}</p><p className="text-xs text-texto-secundario">Eventos</p></div>
+            </div>
+          </Card>
+        </button>
+        <button onClick={() => toggleSecao('busca')} className="text-left">
+          <Card hover padding="sm" className={secaoAberta === 'busca' ? 'ring-2 ring-salus-500/40' : ''}>
+            <div className="flex items-center gap-3">
+              <Search size={22} className="text-salus-400 shrink-0" />
+              <div><p className="text-2xl font-bold text-texto">{docsConfirmados.length}</p><p className="text-xs text-texto-secundario">Documentos</p></div>
             </div>
           </Card>
         </button>
@@ -302,6 +311,14 @@ export function Painel() {
           vacinas={vacinas}
           eventos={eventos}
           configIA={config.provedor_ia}
+        />
+      )}
+
+      {secaoAberta === 'busca' && (
+        <BuscaSemantica
+          caixaEntrada={caixaEntrada}
+          configIA={config.provedor_ia}
+          onAbrirDocumento={(item) => setDocAberto(item)}
         />
       )}
 
