@@ -9,7 +9,22 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Nenhuma coleção fora deste padrão é permitida.
+    // Coleção de administração de usuários
+    // - Qualquer auth pode criar seu próprio documento (self-register)
+    // - Qualquer auth pode ler seu próprio documento (verificar status)
+    // - Apenas o super-admin (jussier.silva@gmail.com) pode listar/todos e atualizar status
+    match /admin_usuarios/{uid} {
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && (
+        request.auth.uid == uid ||
+        request.auth.token.email == 'jussier.silva@gmail.com'
+      );
+      allow write: if request.auth != null && (
+        request.auth.token.email == 'jussier.silva@gmail.com'
+      );
+    }
+
+    // Nenhuma coleção fora dos padrões acima é permitida.
     match /{document=**} {
       allow read, write: if false;
     }
