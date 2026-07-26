@@ -16,9 +16,12 @@ export default defineConfig({
         description: 'Organize o histórico de saúde de toda a família — pessoas e animais.',
         start_url: '/',
         display: 'standalone',
+        display_override: ['window-controls-overlay', 'standalone'],
         theme_color: '#0d9488',
         background_color: '#0f172a',
         lang: 'pt-BR',
+        orientation: 'portrait-primary',
+        categories: ['health', 'medical', 'family'],
         icons: [
           { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
           { src: '/favicon.svg', sizes: '192x192', type: 'image/svg+xml' },

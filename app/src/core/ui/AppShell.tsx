@@ -48,7 +48,7 @@ export function AppShell() {
   return (
     <div className="flex h-dvh">
       {/* ── Sidebar Desktop ── */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-borda bg-fundo-card/50 p-4">
+      <aside className="hidden lg:flex flex-col w-64 lg:w-72 border-r border-borda bg-fundo-card/50 p-4">
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-3 mb-8">
           <div className="w-9 h-9 rounded-[var(--radius-md)] bg-gradient-to-br from-salus-500 to-salus-700 flex items-center justify-center shadow-lg shadow-salus-600/20">
@@ -114,14 +114,14 @@ export function AppShell() {
 
       {/* ── Main Content ── */}
       <main className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto pb-20 md:pb-6">
+        <div className="flex-1 overflow-y-auto pb-20 lg:pb-6">
           <div className="max-w-5xl mx-auto px-4 py-6">
             <Outlet />
           </div>
         </div>
 
         {/* ── Disclaimer ── */}
-        <footer className="hidden md:block border-t border-borda px-4 py-2.5 text-center">
+        <footer className="hidden lg:block border-t border-borda px-4 py-2.5 text-center">
           <p className="text-[11px] text-texto-secundario/60">
             O Salus organiza informações de saúde. Ele não diagnostica, não prescreve e não substitui médico ou veterinário.
           </p>
@@ -129,27 +129,31 @@ export function AppShell() {
       </main>
 
       {/* ── Bottom Nav Mobile ── */}
-      <nav className="fixed bottom-0 left-0 right-0 md:hidden glass border-t border-borda z-50">
-        <div className="flex items-center justify-around px-2 py-1">
+      <nav className="fixed bottom-0 left-0 right-0 lg:hidden z-50 pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="glass border-t border-borda flex items-center justify-around px-1 py-1">
           {links.map(({ to, label, icone: Icone }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 py-2 px-3 rounded-[var(--radius-sm)]
-                 transition-colors touch-target
-                 ${isActive ? 'text-salus-400' : 'text-texto-secundario'}`
+                `flex flex-col items-center gap-1 py-2 px-3 rounded-[var(--radius-sm)]
+                 transition-all duration-200 touch-target relative min-w-[56px]
+                 ${isActive ? 'text-salus-400' : 'text-texto-secundario active:text-salus-400'}`
               }
             >
-              <Icone size={20} />
-              <span className="text-[10px] font-medium">{label}</span>
+              {({ isActive }) => (
+                <>
+                  <Icone size={20} />
+                  <span className="text-[10px] font-medium leading-none">{label}</span>
+                  {isActive && (
+                    <span className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-salus-400 rounded-full" />
+                  )}
+                </>
+              )}
             </NavLink>
           ))}
         </div>
-        <p className="text-[9px] text-texto-secundario/40 text-center pb-1 px-4">
-          O Salus não diagnostica nem substitui profissional de saúde.
-        </p>
       </nav>
     </div>
   );

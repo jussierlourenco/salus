@@ -63,12 +63,34 @@ html {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background-color: var(--color-fundo);
   color: var(--color-texto);
   min-height: 100dvh;
+}
+
+/* ── PWA: prevent pull-to-refresh and overscroll in standalone mode ── */
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  input, textarea, [contenteditable] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}
+
+/* ── Safe area utilities ── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* ── Scrollbar ── */
