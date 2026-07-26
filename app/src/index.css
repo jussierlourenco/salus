@@ -37,6 +37,17 @@
   --radius-xl: 1.25rem;
 }
 
+/* ── Tema claro ── */
+/* Ligado via [data-theme="light"] no <html>, definido em core/ui/useTema.ts. */
+:root[data-theme="light"] {
+  --color-fundo: #f8fafc;
+  --color-fundo-card: #ffffff;
+  --color-fundo-elevado: #f1f5f9;
+  --color-texto: #0f172a;
+  --color-texto-secundario: #64748b;
+  --color-borda: #e2e8f0;
+}
+
 /* ── Base ── */
 html {
   font-family: var(--font-sans);
@@ -103,6 +114,11 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+:root[data-theme="light"] .glass {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 /* ── Utilities ── */

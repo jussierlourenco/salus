@@ -7,8 +7,11 @@ import {
   LogOut,
   Stethoscope,
   Users,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
+import { useTema } from './useTema';
 
 const links = [
   { to: '/', label: 'Painel', icone: LayoutDashboard },
@@ -40,6 +43,7 @@ function NavItem({ to, label, icone: Icone }: typeof links[number]) {
 
 export function AppShell() {
   const { usuario, sair } = useAuth();
+  const { tema, alternarTema } = useTema();
 
   return (
     <div className="flex h-dvh">
@@ -62,6 +66,17 @@ export function AppShell() {
             <NavItem key={link.to} {...link} />
           ))}
         </nav>
+
+        {/* Tema */}
+        <button
+          onClick={alternarTema}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] touch-target
+                     text-sm font-medium text-texto-secundario hover:text-texto hover:bg-fundo-elevado/50
+                     border border-transparent transition-all duration-200"
+        >
+          {tema === 'escuro' ? <Sun size={20} /> : <Moon size={20} />}
+          <span className="hidden lg:inline">{tema === 'escuro' ? 'Modo claro' : 'Modo escuro'}</span>
+        </button>
 
         {/* User */}
         <div className="border-t border-borda pt-4 mt-4">

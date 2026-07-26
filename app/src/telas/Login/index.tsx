@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { Botao } from '../../componentes/ui';
+import { Botao } from '../../core/ui';
 import { Stethoscope, Shield, Smartphone, Cloud } from 'lucide-react';
 import { useEffect } from 'react';
 

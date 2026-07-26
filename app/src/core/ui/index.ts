@@ -4,3 +4,6 @@ export { Campo } from './Campo';
 export { Badge } from './Badge';
 export { Carregando } from './Carregando';
 export { EstadoVazio } from './EstadoVazio';
+export { PainelDeProposta } from './PainelDeProposta';
+export { useTema } from './useTema';
+export type { Tema } from './useTema';

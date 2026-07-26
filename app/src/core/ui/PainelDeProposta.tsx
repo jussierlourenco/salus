@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react';
-import { Card, Botao, Badge } from './ui';
+import { Card, Botao, Badge } from '.';
 import { Check, X, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface CampoProposta {

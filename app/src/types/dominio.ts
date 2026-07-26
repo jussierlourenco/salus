@@ -158,7 +158,6 @@ export interface ConfigUsuario {
     dados_terceiros: boolean;
   };
   provedor_ia?: ConfigProvedorIA;
-  drive_refresh_token?: string;
   drive_pasta_raiz_id?: string;
   drive_conectado?: boolean;
   ultima_revisao?: string;

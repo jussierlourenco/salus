@@ -21,12 +21,12 @@ const STORAGE_KEY = 'salus_config_usuario';
 
 /**
  * localStorage é só cache de leitura (evita flash de UI vazia); nunca deve reter
- * segredos (chave de IA, refresh_token do Drive) além da sessão em memória.
+ * a chave de IA além da sessão em memória (o access token do Drive nunca é persistido
+ * em lugar nenhum — vive só em memória, ver core/storage/googleAuth.ts).
  */
 function paraCacheSemSegredos(config: ConfigUsuario): ConfigUsuario {
-  const { drive_refresh_token: _t, ...resto } = config;
   return {
-    ...resto,
+    ...config,
     provedor_ia: config.provedor_ia ? { ...config.provedor_ia, chave: '' } : config.provedor_ia,
   };
 }
@@ -35,7 +35,7 @@ interface ConfigContexto {
   config: ConfigUsuario;
   carregando: boolean;
   salvarConfigIA: (configIA: ConfigProvedorIA | null) => Promise<void>;
-  salvarConfigDrive: (driveConfig: { token?: string; pasta_id?: string; conectado: boolean }) => Promise<void>;
+  salvarConfigDrive: (driveConfig: { pasta_id?: string; conectado: boolean }) => Promise<void>;
   testarIA: (configIA: ConfigProvedorIA) => Promise<{ ok: boolean; mensagem: string }>;
   exportarDadosZip: () => Promise<void>;
   apagarConta: () => Promise<void>;
@@ -101,10 +101,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const salvarConfigDrive = async (driveConfig: { token?: string; pasta_id?: string; conectado: boolean }) => {
+  const salvarConfigDrive = async (driveConfig: { pasta_id?: string; conectado: boolean }) => {
     const nova: ConfigUsuario = {
       ...config,
-      drive_refresh_token: driveConfig.token || undefined,
       drive_pasta_raiz_id: driveConfig.pasta_id || undefined,
       drive_conectado: driveConfig.conectado,
     };

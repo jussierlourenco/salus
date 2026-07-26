@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Botao, Card, Campo } from '../../componentes/ui';
+import { Botao, Card, Campo } from '../../core/ui';
 import {
   Stethoscope, Users, ChevronRight, ChevronLeft,
   Shield, Cloud, Plus, X, Dog, Cat, User, Check,

@@ -3,10 +3,12 @@ import { Card, Botao, Campo } from '../../core/ui';
 import {
   Settings, Key, Cloud, Download, Trash2,
   Shield, ChevronRight, CheckCircle2, AlertTriangle,
-  RefreshCw, Eye, EyeOff, Check, X, Folder
+  RefreshCw, Eye, EyeOff, Check, X, Folder, Sun, Moon
 } from 'lucide-react';
 import { useConfiguracao } from '../../core/config/ConfigContext';
 import { ServicoGoogleDrive } from '../../core/storage/drive';
+import { conectarGoogleDrive, desconectarGoogleDrive, driveConfigurado } from '../../core/storage/googleAuth';
+import { useTema } from '../../core/ui/useTema';
 import type { ConfigProvedorIA, ProvedorIATipo } from '../../types/dominio';
 
 interface PresetItem {
@@ -17,6 +19,7 @@ interface PresetItem {
   modelo_padrao: string;
   gratis: boolean;
   desc: string;
+  url_obter_chave?: string;
 }
 
 const PRESETS: PresetItem[] = [
@@ -27,6 +30,7 @@ const PRESETS: PresetItem[] = [
     modelo_padrao: 'gemini-2.0-flash',
     gratis: true,
     desc: 'Recomendado · Excelente para PDFs, fotos de exames e chat',
+    url_obter_chave: 'https://aistudio.google.com/apikey',
   },
   {
     id: 'groq',
@@ -36,6 +40,7 @@ const PRESETS: PresetItem[] = [
     modelo_padrao: 'llama-3.3-70b-versatile',
     gratis: true,
     desc: 'Ultra rápido · Ideal para o Chat em tempo real',
+    url_obter_chave: 'https://console.groq.com/keys',
   },
   {
     id: 'openrouter',
@@ -45,6 +50,7 @@ const PRESETS: PresetItem[] = [
     modelo_padrao: 'google/gemini-2.0-flash-lite-001',
     gratis: true,
     desc: 'Catálogo variado com vários modelos gratuitos',
+    url_obter_chave: 'https://openrouter.ai/settings/keys',
   },
   {
     id: 'mistral',
@@ -54,6 +60,7 @@ const PRESETS: PresetItem[] = [
     modelo_padrao: 'mistral-small-latest',
     gratis: true,
     desc: 'Modelos europeus de alta precisão',
+    url_obter_chave: 'https://console.mistral.ai/api-keys',
   },
   {
     id: 'custom',
@@ -68,6 +75,7 @@ const PRESETS: PresetItem[] = [
 
 export function Ajustes() {
   const { config, salvarConfigIA, salvarConfigDrive, testarIA, exportarDadosZip, apagarConta } = useConfiguracao();
+  const { tema, alternarTema } = useTema();
 
   const [secaoAberta, setSecaoAberta] = useState<string | null>('ia');
 
@@ -80,10 +88,9 @@ export function Ajustes() {
   const [mostrarAvancado, setMostrarAvancado] = useState(false);
 
   // Estado do formulário do Google Drive
-  const [driveToken, setDriveToken] = useState('');
-  const [drivePastaId, setDrivePastaId] = useState('Salus App');
-  const [testandoDrive, setTestandoDrive] = useState(false);
-  const [salvandoDrive, setSalvandoDrive] = useState(false);
+  const [drivePastaId, setDrivePastaId] = useState('');
+  const [conectandoDrive, setConectandoDrive] = useState(false);
+  const [desconectandoDrive, setDesconectandoDrive] = useState(false);
   const [feedbackDrive, setFeedbackDrive] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
   // Status de feedback de IA
@@ -113,9 +120,6 @@ export function Ajustes() {
       else setPresetSel('custom');
     }
 
-    if (config.drive_refresh_token) {
-      setDriveToken(config.drive_refresh_token);
-    }
     if (config.drive_pasta_raiz_id) {
       setDrivePastaId(config.drive_pasta_raiz_id);
     }
@@ -193,46 +197,34 @@ export function Ajustes() {
     setFeedback({ tipo: 'sucesso', texto: 'Chave removida. O Salus continuará funcionando sem IA.' });
   };
 
-  const handleSalvarDrive = async () => {
-    setSalvandoDrive(true);
+  const handleConectarDrive = async () => {
+    setConectandoDrive(true);
     setFeedbackDrive(null);
     try {
-      await salvarConfigDrive({
-        token: driveToken.trim(),
-        pasta_id: drivePastaId.trim() || 'Salus App',
-        conectado: true,
-      });
-      setFeedbackDrive({ tipo: 'sucesso', texto: 'Configuração do Google Drive salva no banco de dados!' });
+      const accessToken = await conectarGoogleDrive();
+      const servico = new ServicoGoogleDrive(accessToken);
+      const pastaId = await servico.obterOuCriarPastaRaiz();
+      setDrivePastaId(pastaId);
+      await salvarConfigDrive({ pasta_id: pastaId, conectado: true });
+      setFeedbackDrive({ tipo: 'sucesso', texto: 'Google Drive conectado! A pasta "Salus App" foi encontrada/criada na sua conta.' });
     } catch (e) {
-      setFeedbackDrive({ tipo: 'erro', texto: 'Erro ao salvar Drive: ' + (e as Error).message });
+      setFeedbackDrive({ tipo: 'erro', texto: (e as Error).message });
     } finally {
-      setSalvandoDrive(false);
-    }
-  };
-
-  const handleTestarDrive = async () => {
-    setTestandoDrive(true);
-    setFeedbackDrive(null);
-    try {
-      if (driveToken.trim()) {
-        const servico = new ServicoGoogleDrive(driveToken.trim());
-        await servico.obterOuCriarPastaRaiz();
-        setFeedbackDrive({ tipo: 'sucesso', texto: 'Conexão com Google Drive estabelecida e pasta verificada com sucesso!' });
-      } else {
-        setFeedbackDrive({ tipo: 'sucesso', texto: `Modo local ativo: Pasta configurada como "${drivePastaId || 'Salus App'}".` });
-      }
-    } catch (e) {
-      setFeedbackDrive({ tipo: 'erro', texto: 'Erro ao conectar ao Google Drive: ' + (e as Error).message });
-    } finally {
-      setTestandoDrive(false);
+      setConectandoDrive(false);
     }
   };
 
   const handleDesconectarDrive = async () => {
-    if (!confirm('Deseja desconectar o Google Drive?')) return;
-    await salvarConfigDrive({ token: '', pasta_id: '', conectado: false });
-    setDriveToken('');
-    setFeedbackDrive({ tipo: 'sucesso', texto: 'Google Drive desconectado.' });
+    if (!confirm('Deseja desconectar o Google Drive? Os arquivos já enviados continuam na sua conta Google, só o app deixa de ter acesso.')) return;
+    setDesconectandoDrive(true);
+    try {
+      desconectarGoogleDrive();
+      await salvarConfigDrive({ pasta_id: undefined, conectado: false });
+      setDrivePastaId('');
+      setFeedbackDrive({ tipo: 'sucesso', texto: 'Google Drive desconectado.' });
+    } finally {
+      setDesconectandoDrive(false);
+    }
   };
 
   const handleExportarZip = async () => {
@@ -347,9 +339,21 @@ export function Ajustes() {
 
             {/* API Key Input */}
             <div className="space-y-2 pt-2">
-              <label className="block text-sm font-medium text-texto">
-                Chave da API ({PRESETS.find((p) => p.id === presetSel)?.nome})
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-texto">
+                  Chave da API ({PRESETS.find((p) => p.id === presetSel)?.nome})
+                </label>
+                {PRESETS.find((p) => p.id === presetSel)?.url_obter_chave && (
+                  <a
+                    href={PRESETS.find((p) => p.id === presetSel)?.url_obter_chave}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-salus-400 hover:underline"
+                  >
+                    Como conseguir uma chave grátis →
+                  </a>
+                )}
+              </div>
               <div className="relative flex items-center">
                 <input
                   type={mostrarSenha ? 'text' : 'password'}
@@ -486,26 +490,26 @@ export function Ajustes() {
         {secaoAberta === 'drive' && (
           <div className="mt-4 pt-4 border-t border-borda space-y-4">
             <p className="text-sm text-texto-secundario leading-relaxed">
-              O Salus armazena documentos e arquivos originais na pasta da sua nuvem pessoal (`Salus App`).
+              O Salus armazena documentos e arquivos originais numa pasta &quot;Salus App&quot; na sua própria conta do Google Drive —
+              o app só enxerga os arquivos que ele mesmo cria lá (escopo <code className="text-xs">drive.file</code>), nunca o resto do seu Drive.
             </p>
 
-            <div className="space-y-3 p-4 bg-fundo-elevado/30 border border-borda rounded-[var(--radius-md)]">
-              <Campo
-                label="ID ou Nome da Pasta Raiz no Drive"
-                value={drivePastaId}
-                onChange={(e) => setDrivePastaId(e.target.value)}
-                placeholder="ex: Salus App"
-                icone={<Folder size={18} />}
-              />
+            {!driveConfigurado() && (
+              <div className="p-3 rounded-[var(--radius-md)] text-sm flex items-start gap-2.5 border bg-fundo-elevado/50 border-borda text-texto-secundario">
+                <AlertTriangle size={18} className="text-alerta-400 shrink-0 mt-0.5" />
+                <span>
+                  Integração não configurada neste ambiente (falta <code className="text-xs">VITE_GOOGLE_CLIENT_ID</code>).
+                  Veja <code className="text-xs">app/CONFIGURACAO.md</code> para configurar.
+                </span>
+              </div>
+            )}
 
-              <Campo
-                label="Token OAuth / Refresh Token (Opcional)"
-                type="password"
-                value={driveToken}
-                onChange={(e) => setDriveToken(e.target.value)}
-                placeholder="Insira um token de acesso para integrar ao seu Google Drive"
-              />
-            </div>
+            {driveConectado && drivePastaId && (
+              <div className="flex items-center gap-2 p-3 bg-fundo-elevado/30 border border-borda rounded-[var(--radius-md)] text-sm text-texto-secundario">
+                <Folder size={16} />
+                Pasta conectada: <span className="text-texto font-medium">Salus App</span>
+              </div>
+            )}
 
             {feedbackDrive && (
               <div
@@ -525,40 +529,56 @@ export function Ajustes() {
             )}
 
             <div className="flex flex-wrap gap-2 pt-2 border-t border-borda">
-              <Botao
-                type="button"
-                onClick={handleSalvarDrive}
-                disabled={salvandoDrive || testandoDrive}
-                icone={salvandoDrive ? <RefreshCw size={16} className="animate-spin" /> : <Cloud size={16} />}
-              >
-                {salvandoDrive ? 'Salvando...' : 'Salvar Configuração do Drive'}
-              </Botao>
-
-              <Botao
-                type="button"
-                variante="secundario"
-                onClick={handleTestarDrive}
-                disabled={testandoDrive || salvandoDrive}
-                icone={testandoDrive ? <RefreshCw size={16} className="animate-spin" /> : <Folder size={16} />}
-              >
-                {testandoDrive ? 'Testando Drive...' : 'Testar Conexão com Drive'}
-              </Botao>
-
-              {driveConectado && (
+              {!driveConectado ? (
+                <Botao
+                  type="button"
+                  onClick={handleConectarDrive}
+                  disabled={conectandoDrive || !driveConfigurado()}
+                  icone={conectandoDrive ? <RefreshCw size={16} className="animate-spin" /> : <Cloud size={16} />}
+                >
+                  {conectandoDrive ? 'Conectando...' : 'Conectar Google Drive'}
+                </Botao>
+              ) : (
                 <Botao
                   type="button"
                   variante="perigo"
                   tamanho="sm"
                   onClick={handleDesconectarDrive}
-                  icone={<Trash2 size={16} />}
-                  className="ml-auto"
+                  disabled={desconectandoDrive}
+                  icone={desconectandoDrive ? <RefreshCw size={16} className="animate-spin" /> : <Trash2 size={16} />}
                 >
-                  Desconectar
+                  {desconectandoDrive ? 'Desconectando...' : 'Desconectar'}
                 </Botao>
               )}
             </div>
           </div>
         )}
+      </Card>
+
+      {/* Aparência Card */}
+      <Card>
+        <div className="flex items-center justify-between w-full text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-fundo-elevado flex items-center justify-center">
+              {tema === 'escuro' ? <Moon size={20} className="text-texto-secundario" /> : <Sun size={20} className="text-texto-secundario" />}
+            </div>
+            <div>
+              <h2 className="font-semibold text-texto">Aparência</h2>
+              <p className="text-xs text-texto-secundario">
+                {tema === 'escuro' ? 'Modo escuro ativo' : 'Modo claro ativo'}
+              </p>
+            </div>
+          </div>
+          <Botao
+            type="button"
+            variante="secundario"
+            tamanho="sm"
+            onClick={alternarTema}
+            icone={tema === 'escuro' ? <Sun size={16} /> : <Moon size={16} />}
+          >
+            {tema === 'escuro' ? 'Usar modo claro' : 'Usar modo escuro'}
+          </Botao>
+        </div>
       </Card>
 
       {/* Export / Backup Card */}

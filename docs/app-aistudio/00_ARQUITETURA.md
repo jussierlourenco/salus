@@ -244,21 +244,23 @@ Regra de ouro do processo: **um prompt = um entregável testável**. Depois de c
 
 ---
 
-## 7.1 Status de implementação — auditoria de 2026-07-25
+## 7.1 Status de implementação — auditoria de 2026-07-25 (atualizado)
 
-Uma auditoria arquitetural do código em `app/src` contra este documento encontrou o app **hoje 100% client-side** (Vite + React + Firebase JS SDK direto no navegador, sem servidor/API própria) — o que diverge da premissa de §2.1 e §3.1 ("o servidor é o único lugar que fala com qualquer provedor de IA"). Registro do estado real, para não perder de vista o que falta:
+Uma auditoria arquitetural do código em `app/src` contra este documento encontrou o app **100% client-side** (Vite + React + Firebase JS SDK direto no navegador, sem servidor/API própria) — o que diverge da premissa de §2.1 e §3.1 ("o servidor é o único lugar que fala com qualquer provedor de IA"). Isso não foi resolvido nesta rodada (exigiria criar um backend do zero); as correções abaixo foram feitas trabalhando dentro dessa realidade client-side, não contra ela.
 
 | Regra do documento | Status real | Observação |
 |---|---|---|
 | Isolamento por `uid` no modelo de dados | OK | Todos os repositórios em `app/src/modulos/*/casos-de-uso` e `app/src/core/database/repositorio.ts` escrevem só sob `usuarios/{uid}/...` |
-| Regras de segurança do Firestore (§4) | **Corrigido nesta auditoria** | `app/firestore.rules` criado, espelhando a regra do §4. Falta associar o projeto (`firebase use <project-id>`) e rodar `firebase deploy --only firestore:rules` — não há acesso ao console/CLI do Firebase a partir daqui |
-| IA chamada só pelo servidor (§3.1) | **Violado** | `core/ia/gemini.ts` e `core/ia/openaiCompat.ts` chamam a API do provedor direto do navegador; a chave do usuário roda no cliente (inclusive na query string, no caso do Gemini). Corrigir exige criar um backend real (ex.: rotas serverless na Vercel), fora do escopo desta rodada |
-| `drive_refresh_token` nunca chega ao cliente (§4) | **Parcialmente corrigido** | Sem backend, o token precisa transitar pelo cliente para funcionar — mas ele deixou de ser persistido em `localStorage` (`ConfigContext.tsx`, função `paraCacheSemSegredos`); continua visível/editável em Ajustes e presente no documento Firestore lido pelo cliente |
-| `<PainelDeProposta>` / `aplicarProposta()` (§5) | Não implementado | Componente existe (`componentes/PainelDeProposta.tsx`) mas não é usado por nenhuma tela; a Caixa de Entrada ainda não tem os handlers de upload/extração ligados |
+| Regras de segurança do Firestore (§4) | **Corrigido** | `app/firestore.rules` criado, espelhando a regra do §4. Falta associar o projeto (`firebase use <project-id>`) e rodar `firebase deploy --only firestore:rules` — não há acesso ao console/CLI do Firebase a partir daqui |
+| IA chamada só pelo servidor (§3.1) | **Violação conhecida, mantida** | `core/ia/gemini.ts` e `core/ia/openaiCompat.ts` chamam a API do provedor direto do navegador; a chave do usuário roda no cliente. Corrigir exige um backend real (ex.: rotas serverless na Vercel) — fora do escopo das rodadas até aqui |
+| Credencial do Drive nunca em repouso no cliente (§4) | **Corrigido, com desenho revisado** | Não existe mais `drive_refresh_token` armazenado (nem em Firestore, nem em `localStorage`). A conexão usa Google Identity Services direto no navegador (`core/storage/googleAuth.ts`): cada sessão obtém um access token de curta duração (~1h) via pop-up de consentimento real, mantido só em memória, com tentativa de renovação silenciosa a cada carregamento. Não há mais campo de "colar token" em Ajustes. Isso é uma adaptação honesta ao fato de o app não ter backend — não implementa o fluxo original de `refresh_token` trocado no servidor, mas elimina a exposição de credencial de longa duração |
+| `<PainelDeProposta>` / `aplicarProposta()` (§5) | Não implementado | Componente existe (`core/ui/PainelDeProposta.tsx`) mas não é usado por nenhuma tela; a Caixa de Entrada ainda não tem os handlers de upload/extração ligados |
 | Painel `/admin` (§6) | Não implementado | Nenhuma rota `/admin` no app ainda |
-| Duplicação `core/` vs `servicos/` | **Corrigido** | `app/src/servicos/*` e `app/src/contextos/ConfigContext.tsx` eram cópias mortas do que já existe em `core/` — removidos; o único arquivo vivo dessa árvore (`servicos/firestore/repositorio.ts`) foi movido para `core/database/repositorio.ts` |
+| Duplicação `core/` vs `servicos/`/`componentes/`/`data/`/`auth/` | **Corrigido** | Quatro árvores paralelas foram encontradas e removidas: `servicos/`, `contextos/`, `componentes/{AppShell,ui}` e `data/firebase.ts` + `auth/AuthProvider.tsx` eram cópias mortas ou concorrentes do que hoje vive só em `core/`. Os poucos arquivos vivos dessas árvores (`servicos/firestore/repositorio.ts`, `componentes/PainelDeProposta.tsx`) foram movidos para dentro de `core/` |
+| Chave de IA / Client ID do Drive documentados | **Adicionado** | `app/CONFIGURACAO.md` explica como cada usuário obtém sua própria chave de IA (Gemini, Groq, OpenRouter, Mistral) e como quem hospeda o app cria o Client ID OAuth do Drive no Google Cloud Console — distinção importante, já que são credenciais de donos diferentes |
+| Modo claro | **Adicionado** | O app era dark-only; agora há alternância de tema (`core/ui/useTema.ts`), persistida por usuário, com toggle na barra lateral e em Ajustes |
 
-**Pendências que seguem abertas para uma próxima rodada:** mover chamadas de IA e a troca do `refresh_token` do Drive para um backend server-side (item mais estrutural, muda o modelo de deploy do zero); deployar `firestore.rules` no projeto real; ligar a Caixa de Entrada ao `<PainelDeProposta>`.
+**Pendências que seguem abertas:** mover chamadas de IA e a autorização do Drive para um backend server-side (item mais estrutural, muda o modelo de deploy do zero); deployar `firestore.rules` no projeto real; ligar a Caixa de Entrada ao `<PainelDeProposta>`; publicar a tela de consentimento OAuth do Drive além do modo de teste do Google Cloud (ver `app/CONFIGURACAO.md` §2).
 
 ---
 

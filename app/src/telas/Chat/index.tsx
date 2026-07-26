@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Card, Botao } from '../../componentes/ui';
+import { Card, Botao } from '../../core/ui';
 import { MessageCircle, Send, Sparkles, Info, Settings, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useConfiguracao } from '../../core/config/ConfigContext';

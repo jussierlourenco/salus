@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Card, Botao, Badge } from '../../componentes/ui';
+import { Card, Botao, Badge } from '../../core/ui';
 import { Inbox, Upload, FileText, Image, Mic, Sparkles, PenLine, X } from 'lucide-react';
 
 export function CaixaDeEntrada() {

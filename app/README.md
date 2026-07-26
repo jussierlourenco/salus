@@ -1,4 +1,8 @@
-# React + TypeScript + Vite
+# Salus App
+
+Para configurar as credenciais do Firebase, a chave de IA (BYOK) e a integração com o Google Drive, veja **[CONFIGURACAO.md](./CONFIGURACAO.md)**.
+
+## React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
