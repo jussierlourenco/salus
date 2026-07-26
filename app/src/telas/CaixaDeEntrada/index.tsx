@@ -13,7 +13,7 @@ import { salvarMedicamento } from '../../modulos/medicamentos/casos-de-uso/repos
 import { salvarExame } from '../../modulos/exames/casos-de-uso/repositorioExames';
 import { salvarVacina } from '../../modulos/vacinas/casos-de-uso/repositorioVacinas';
 import { salvarEvento } from '../../core/database/repositorio';
-import { salvarCaixaEntrada } from '../../modulos/caixa-entrada/casos-de-uso/repositorioCaixaEntrada';
+import { salvarCaixaEntrada, atualizarCaixaEntrada } from '../../modulos/caixa-entrada/casos-de-uso/repositorioCaixaEntrada';
 import { salvarArquivoLocal } from '../../core/storage/indexedDB';
 import { baixarArquivo } from '../../core/storage/exportImport';
 import type { Membro } from '../../modulos/membros/entidades/membro';
@@ -61,6 +61,31 @@ const labelGrupo: Record<string, string> = {
   evento: 'Eventos',
 };
 
+function verificarInconsistenciaTemporal(
+  proposta: PropostaExtracao
+): { dataDocumento: string; diffDays: number } | null {
+  const datas = [
+    ...(proposta.exames ?? []).map((e) => e.data),
+    ...(proposta.vacinas ?? []).map((v) => v.aplicada_em),
+    ...(proposta.eventos ?? []).map((ev) => ev.data),
+  ].filter(Boolean) as string[];
+  if (datas.length === 0) return null;
+  const datasOrdenadas = [...datas].sort();
+  const dataDocumento = datasOrdenadas[0]!;
+  const hoje = new Date().toISOString().split('T')[0];
+  const diffMs = new Date(hoje).getTime() - new Date(dataDocumento).getTime();
+  const diffDays = Math.abs(diffMs) / (1000 * 60 * 60 * 24);
+  if (diffDays > 3) return { dataDocumento, diffDays: Math.round(diffDays) };
+  return null;
+}
+
+function fmtDataSimples(d?: string): string {
+  if (!d) return '';
+  const p = d.split('T')[0]!.split('-');
+  if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+  return d;
+}
+
 // ── Componente principal ──
 
 export function CaixaDeEntrada() {
@@ -84,6 +109,9 @@ export function CaixaDeEntrada() {
   const [membroPorProposta, setMembroPorProposta] = useState<Record<string, string>>({});
   const [msgErro, setMsgErro] = useState('');
   const [msgSucesso, setMsgSucesso] = useState('');
+
+  // Track Firestore doc IDs for real-time timeline updates
+  const [firestoreDocIds, setFirestoreDocIds] = useState<Record<string, string>>({});
 
   // Dados auxiliares
   const [membros, setMembros] = useState<Membro[]>([]);
@@ -141,10 +169,32 @@ export function CaixaDeEntrada() {
     setTotalExtrair(arquivos.length);
 
     const provedor = criarProvedor(config.provedor_ia);
+    const uid = usuario.uid;
+    const agoraExtraindo = Date.now();
     const resultados: PropostaArquivo[] = [];
+    const docIds: Record<string, string> = {};
 
+    // 1. Pre-save each file to Firestore as 'processando' so it appears in the timeline
     for (let i = 0; i < arquivos.length; i++) {
       const arquivo = arquivos[i];
+      try {
+        const fsId = await salvarCaixaEntrada(uid, {
+          nome_arquivo: arquivo.name,
+          mime_type: arquivo.type,
+          status: 'processando',
+        });
+        const propostaId = `${arquivo.name}-${agoraExtraindo}-${i}`;
+        docIds[propostaId] = fsId;
+      } catch {
+        // If pre-save fails, continue without timeline preview
+      }
+    }
+    setFirestoreDocIds(docIds);
+
+    // 2. Extraction loop
+    for (let i = 0; i < arquivos.length; i++) {
+      const arquivo = arquivos[i];
+      const propostaId = `${arquivo.name}-${agoraExtraindo}-${i}`;
       try {
         const buffer = await arquivo.arrayBuffer();
         const proposta = await provedor.extrairDocumento(
@@ -155,19 +205,29 @@ export function CaixaDeEntrada() {
         );
 
         resultados.push({
-          id: `${arquivo.name}-${Date.now()}-${i}`,
+          id: propostaId,
           arquivo,
           proposta,
           ok: true,
         });
       } catch (err) {
         resultados.push({
-          id: `${arquivo.name}-${Date.now()}-${i}`,
+          id: propostaId,
           arquivo,
           proposta: {},
           ok: false,
           erro: err instanceof Error ? err.message : 'Erro desconhecido ao processar o arquivo.',
         });
+        // Mark failed items as 'descartado' in Firestore
+        const fsId = docIds[propostaId];
+        if (fsId) {
+          try {
+            await atualizarCaixaEntrada(uid, fsId, {
+              status: 'descartado',
+              proposta: { notas: err instanceof Error ? err.message : 'Falha na extração' },
+            });
+          } catch { /* cleanup best-effort */ }
+        }
       }
       setProgressoExtraindo(i + 1);
     }
@@ -345,16 +405,28 @@ export function CaixaDeEntrada() {
         ].filter(Boolean) as string[];
         const dataEvento = datasEncontradas.sort()[0] ?? undefined;
 
-        // Registra o item processado na caixa de entrada
-        await salvarCaixaEntrada(uid, {
-          nome_arquivo: proposta.arquivo.name,
-          mime_type: proposta.arquivo.type,
-          status: 'confirmado',
-          proposta: proposta.proposta,
-          storage_id: arquivoId,
-          storage_tipo: 'indexeddb',
-          data_evento: dataEvento,
-        });
+        // Atualiza o item existente no Firestore (criado como 'processando')
+        const fsId = firestoreDocIds[proposta.id];
+        if (fsId) {
+          await atualizarCaixaEntrada(uid, fsId, {
+            status: 'confirmado',
+            proposta: proposta.proposta,
+            storage_id: arquivoId,
+            storage_tipo: 'indexeddb',
+            data_evento: dataEvento,
+          });
+        } else {
+          // Fallback: cria um novo item (caso o pré-save tenha falhado)
+          await salvarCaixaEntrada(uid, {
+            nome_arquivo: proposta.arquivo.name,
+            mime_type: proposta.arquivo.type,
+            status: 'confirmado',
+            proposta: proposta.proposta,
+            storage_id: arquivoId,
+            storage_tipo: 'indexeddb',
+            data_evento: dataEvento,
+          });
+        }
       } catch (err) {
         erros.push(`${proposta.arquivo.name}: ${err instanceof Error ? err.message : 'Erro ao salvar'}`);
       }
@@ -373,7 +445,18 @@ export function CaixaDeEntrada() {
     setEtapa('upload');
   };
 
-  const descartar = () => {
+  const descartar = async () => {
+    // Limpa items 'processando' do Firestore
+    if (usuario) {
+      for (const fsId of Object.values(firestoreDocIds)) {
+        try {
+          await atualizarCaixaEntrada(usuario.uid, fsId, { status: 'descartado' });
+        } catch {
+          // cleanup best-effort
+        }
+      }
+    }
+    setFirestoreDocIds({});
     setArquivos([]);
     setPropostas([]);
     setItensSelecao(new Map());
@@ -601,6 +684,10 @@ function PropostaCard({
   labelGrupo,
 }: PropostaCardProps) {
   const [expandido, setExpandido] = useState(true);
+  const inconsistencia = useMemo(
+    () => verificarInconsistenciaTemporal(proposta.proposta),
+    [proposta.proposta],
+  );
 
   if (!proposta.ok) {
     return (
@@ -657,6 +744,16 @@ function PropostaCard({
               ))}
             </select>
           </div>
+
+          {/* Alerta de inconsistência temporal */}
+          {inconsistencia && (
+            <div className="p-3 rounded-[var(--radius-md)] text-xs flex items-start gap-2.5 border bg-amber-950/30 border-amber-500/30 text-amber-300 animate-fade-in">
+              <Calendar size={14} className="text-amber-400 shrink-0 mt-0.5" />
+              <span>
+                A data de hoje é diferente da data deste documento (<strong>{fmtDataSimples(inconsistencia.dataDocumento)}</strong> — diferença de {inconsistencia.diffDays} {inconsistencia.diffDays === 1 ? 'dia' : 'dias'}). O registro será organizado por essa data na linha do tempo.
+              </span>
+            </div>
+          )}
 
           {/* Seções de cada grupo */}
           {grupos.map((grupo) => {

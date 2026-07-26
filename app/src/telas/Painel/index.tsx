@@ -11,7 +11,8 @@ import { listarMembros } from '../../modulos/membros/casos-de-uso/repositorioMem
 import { listarMedicamentos } from '../../modulos/medicamentos/casos-de-uso/repositorioMedicamentos';
 import { listarExames } from '../../modulos/exames/casos-de-uso/repositorioExames';
 import { listarVacinas } from '../../modulos/vacinas/casos-de-uso/repositorioVacinas';
-import { listarCaixaEntrada } from '../../modulos/caixa-entrada/casos-de-uso/repositorioCaixaEntrada';
+import { listarCaixaEntrada, atualizarCaixaEntrada } from '../../modulos/caixa-entrada/casos-de-uso/repositorioCaixaEntrada';
+import { PainelTendencias } from '../../modulos/tendencias/PainelTendencias';
 import { calcularAlertas } from '../../dominio/alertas';
 import type { Membro } from '../../modulos/membros/entidades/membro';
 import type { Medicamento } from '../../modulos/medicamentos/entidades/medicamento';
@@ -20,7 +21,7 @@ import type { Vacina } from '../../modulos/vacinas/entidades/vacina';
 import type { CaixaEntradaItem } from '../../modulos/caixa-entrada/entidades/caixaEntrada';
 import type { Alerta } from '../../types/dominio';
 
-type SecaoAberta = 'membros' | 'medicamentos' | 'alertas' | null;
+type SecaoAberta = 'membros' | 'medicamentos' | 'alertas' | 'tendencias' | null;
 
 const badgeVariante = { vencido: 'vencido' as const, vencendo_30d: 'alerta' as const, proximo_90d: 'neutro' as const };
 const badgeTexto = { vencido: 'Vencido', vencendo_30d: 'Vence em 30d', proximo_90d: 'Próximos 90d' };
@@ -228,12 +229,14 @@ export function Painel() {
             </div>
           </Card>
         </button>
-        <Card padding="sm">
-          <div className="flex items-center gap-3">
-            <TrendingUp size={22} className="text-salus-400 shrink-0" />
-            <div><p className="text-2xl font-bold text-texto">{exames.length + vacinas.length}</p><p className="text-xs text-texto-secundario">Exames+Vacinas</p></div>
-          </div>
-        </Card>
+        <button onClick={() => toggleSecao('tendencias')} className="text-left">
+          <Card hover padding="sm" className={secaoAberta === 'tendencias' ? 'ring-2 ring-salus-500/40' : ''}>
+            <div className="flex items-center gap-3">
+              <TrendingUp size={22} className="text-salus-400 shrink-0" />
+              <div><p className="text-2xl font-bold text-texto">{exames.length + vacinas.length}</p><p className="text-xs text-texto-secundario">Exames+Vacinas</p></div>
+            </div>
+          </Card>
+        </button>
       </div>
 
       {/* Seções expandidas */}
@@ -269,6 +272,10 @@ export function Painel() {
             </div>);
           })}
         </Card>
+      )}
+
+      {secaoAberta === 'tendencias' && (
+        <PainelTendencias exames={exames} />
       )}
 
       {secaoAberta === 'alertas' && (
@@ -325,6 +332,22 @@ export function Painel() {
           nomeArquivo={docAberto.nome_arquivo}
           mimeType={docAberto.mime_type}
           onFechar={() => setDocAberto(null)}
+          onSaveMarkdown={async (markdown) => {
+            if (!usuario || !docAberto) return;
+            await atualizarCaixaEntrada(usuario.uid, docAberto.id, {
+              proposta: { ...docAberto.proposta, markdown_gerado: markdown },
+            });
+            setDocAberto((prev) =>
+              prev ? { ...prev, proposta: { ...prev.proposta, markdown_gerado: markdown } } : null,
+            );
+            setCaixaEntrada((prev) =>
+              prev.map((item) =>
+                item.id === docAberto.id
+                  ? { ...item, proposta: { ...item.proposta, markdown_gerado: markdown } }
+                  : item,
+              ),
+            );
+          }}
         />
       )}
     </div>

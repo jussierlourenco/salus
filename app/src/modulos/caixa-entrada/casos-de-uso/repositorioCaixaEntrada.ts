@@ -38,3 +38,14 @@ export async function atualizarStatusCaixaEntrada(
     atualizado_em: new Date().toISOString(),
   });
 }
+
+export async function atualizarCaixaEntrada(
+  uid: string,
+  itemId: string,
+  dados: Partial<Omit<CaixaEntradaItem, 'id' | 'criado_em'>>
+): Promise<void> {
+  await updateDoc(docCaixaEntrada(uid, itemId), {
+    ...dados,
+    atualizado_em: new Date().toISOString(),
+  } as Record<string, unknown>);
+}

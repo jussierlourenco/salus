@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { X, FileText, Download, Eye, FileWarning } from 'lucide-react';
+import { X, FileText, Download, Eye, FileWarning, Edit3, Check, RotateCcw, Loader2 } from 'lucide-react';
 import { Botao } from './Botao';
 import { useAuth } from '../auth/AuthProvider';
 import { obterArquivoLocal } from '../storage/indexedDB';
@@ -16,6 +16,8 @@ interface VisualizadorDocumentoProps {
   mimeType: string;
   /** Fechar modal */
   onFechar: () => void;
+  /** Callback para salvar edição do markdown */
+  onSaveMarkdown?: (markdown: string) => Promise<void>;
 }
 
 export function VisualizadorDocumento({
@@ -24,12 +26,19 @@ export function VisualizadorDocumento({
   nomeArquivo,
   mimeType,
   onFechar,
+  onSaveMarkdown,
 }: VisualizadorDocumentoProps) {
   const { usuario } = useAuth();
   const [urlOriginal, setUrlOriginal] = useState<string | null>(null);
   const [carregandoOriginal, setCarregandoOriginal] = useState(false);
   const [erroOriginal, setErroOriginal] = useState(false);
   const [aba, setAba] = useState<'markdown' | 'original'>('markdown');
+
+  // Edição de markdown
+  const [editando, setEditando] = useState(false);
+  const [rascunhoMd, setRascunhoMd] = useState('');
+  const [salvandoMd, setSalvandoMd] = useState(false);
+  const [editSucesso, setEditSucesso] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -71,6 +80,24 @@ export function VisualizadorDocumento({
     a.download = nomeArquivo;
     a.click();
   }, [urlOriginal, nomeArquivo]);
+
+  const iniciarEdicao = () => {
+    setRascunhoMd(proposta?.markdown_gerado ?? '');
+    setEditSucesso(false);
+    setEditando(true);
+  };
+
+  const handleSalvarMd = async () => {
+    if (!onSaveMarkdown || !rascunhoMd.trim()) return;
+    setSalvandoMd(true);
+    try {
+      await onSaveMarkdown(rascunhoMd);
+      setEditSucesso(true);
+      setEditando(false);
+    } finally {
+      setSalvandoMd(false);
+    }
+  };
 
   const isImagem = mimeType.startsWith('image/');
   const isPdf = mimeType === 'application/pdf';
@@ -129,9 +156,57 @@ export function VisualizadorDocumento({
         <div className="flex-1 overflow-y-auto p-4 min-h-0">
           {aba === 'markdown' ? (
             proposta?.markdown_gerado ? (
-              <pre className="text-sm text-texto whitespace-pre-wrap font-sans leading-relaxed">
-                {proposta.markdown_gerado}
-              </pre>
+              editando ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={rascunhoMd}
+                    onChange={(e) => setRascunhoMd(e.target.value)}
+                    className="w-full min-h-[220px] p-3 rounded-[var(--radius-md)] bg-fundo border border-borda text-texto text-sm font-mono leading-relaxed focus:outline-none focus:border-salus-500 resize-y"
+                    disabled={salvandoMd}
+                    aria-label="Editar markdown"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Botao
+                      tamanho="sm"
+                      variante="fantasma"
+                      onClick={() => { setEditando(false); setRascunhoMd(''); }}
+                      icone={<RotateCcw size={14} />}
+                    >
+                      Cancelar
+                    </Botao>
+                    <Botao
+                      tamanho="sm"
+                      onClick={handleSalvarMd}
+                      icone={salvandoMd ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                      disabled={salvandoMd}
+                    >
+                      {salvandoMd ? 'Salvando...' : 'Salvar Alterações'}
+                    </Botao>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-end gap-3 mb-2">
+                    {editSucesso && (
+                      <span className="text-xs text-salus-400 flex items-center gap-1">
+                        <Check size={12} /> Salvo
+                      </span>
+                    )}
+                    {onSaveMarkdown && (
+                      <button
+                        onClick={iniciarEdicao}
+                        className="flex items-center gap-1 text-xs text-texto-secundario hover:text-salus-400 transition-colors"
+                      >
+                        <Edit3 size={12} />
+                        Editar
+                      </button>
+                    )}
+                  </div>
+                  <pre className="text-sm text-texto whitespace-pre-wrap font-sans leading-relaxed">
+                    {proposta.markdown_gerado}
+                  </pre>
+                </div>
+              )
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-texto-secundario">
                 <FileText size={32} className="mb-2 opacity-40" />
