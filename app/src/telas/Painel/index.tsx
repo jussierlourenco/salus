@@ -3,7 +3,7 @@ import { Card, Badge, Carregando, VisualizadorDocumento } from '../../core/ui';
 import {
   Activity, Pill, AlertTriangle, Calendar, TrendingUp, Heart, Users, Clock,
   CheckCircle2, FileText, Inbox, Image, Mic, Stethoscope, Search,
-  ChevronRight, Sparkles,
+  ChevronRight, Sparkles, X,
 } from 'lucide-react';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { useNavigate } from 'react-router-dom';
@@ -152,6 +152,7 @@ export function Painel() {
 
   // Visualizador de documento
   const [docAberto, setDocAberto] = useState<CaixaEntradaItem | null>(null);
+  const [bannerFechado, setBannerFechado] = useState(false);
 
   useEffect(() => {
     async function carregar() {
@@ -199,6 +200,8 @@ export function Painel() {
 
   const toggleSecao = (s: SecaoAberta) => setSecaoAberta((p) => (p === s ? null : s));
 
+  const alertasUrgentes = alertas.filter((a) => a.nivel === 'vencido' || a.nivel === 'vencendo_30d');
+
   return (
     <div className="space-y-6 animate-fade-in max-w-5xl">
       {/* Header */}
@@ -211,6 +214,34 @@ export function Painel() {
           Linha do tempo dos documentos e registros clínicos.
         </p>
       </div>
+
+      {/* Banner de alertas urgentes */}
+      {!bannerFechado && alertasUrgentes.length > 0 && (
+        <div className="flex items-start gap-3 p-4 rounded-[var(--radius-md)] bg-vencido-500/10 border border-vencido-500/30 animate-slide-up">
+          <AlertTriangle size={20} className="text-vencido-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-texto">
+              {alertasUrgentes.length === 1 ? '1 alerta precisa de atenção' : `${alertasUrgentes.length} alertas precisam de atenção`}
+            </p>
+            <p className="text-xs text-texto-secundario mt-0.5">
+              {alertasUrgentes[0]!.membro_nome}: {alertasUrgentes[0]!.descricao}
+              {alertasUrgentes.length > 1 ? ` · +${alertasUrgentes.length - 1} outro(s)` : ''}
+            </p>
+            <button
+              onClick={() => setSecaoAberta('alertas')}
+              className="text-xs font-medium text-vencido-500 hover:underline mt-1.5"
+            >
+              Ver todos os alertas
+            </button>
+          </div>
+          <button
+            onClick={() => setBannerFechado(true)}
+            className="text-texto-secundario hover:text-texto shrink-0 p-1"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
