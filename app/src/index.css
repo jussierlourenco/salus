@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ── Design Tokens ── */
+/* ── Design Tokens (paleta fixa, não muda com tema) ── */
 @theme {
   --color-salus-50: #f0fdfa;
   --color-salus-100: #ccfbf1;
@@ -23,29 +23,39 @@
   --color-vencido-500: #dc2626;
   --color-vencido-600: #b91c1c;
 
-  --color-fundo: #0f172a;
-  --color-fundo-card: #1e293b;
-  --color-fundo-elevado: #334155;
-  --color-texto: #f1f5f9;
-  --color-texto-secundario: #94a3b8;
-  --color-borda: #334155;
-
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.25rem;
+
+  /* ── Cores semânticas: apontam para variáveis CSS que trocam com o tema ── */
+  --color-fundo: var(--bg-fundo);
+  --color-fundo-card: var(--bg-fundo-card);
+  --color-fundo-elevado: var(--bg-fundo-elevado);
+  --color-texto: var(--cor-texto);
+  --color-texto-secundario: var(--cor-texto-secundario);
+  --color-borda: var(--cor-borda);
 }
 
-/* ── Tema claro ── */
-/* Ligado via [data-theme="light"] no <html>, definido em core/ui/useTema.ts. */
+/* ── Escuro (padrão) ── */
+:root {
+  --bg-fundo: #0f172a;
+  --bg-fundo-card: #1e293b;
+  --bg-fundo-elevado: #334155;
+  --cor-texto: #f1f5f9;
+  --cor-texto-secundario: #94a3b8;
+  --cor-borda: #334155;
+}
+
+/* ── Claro ── */
 :root[data-theme="light"] {
-  --color-fundo: #f8fafc;
-  --color-fundo-card: #ffffff;
-  --color-fundo-elevado: #f1f5f9;
-  --color-texto: #0f172a;
-  --color-texto-secundario: #64748b;
-  --color-borda: #e2e8f0;
+  --bg-fundo: #f8fafc;
+  --bg-fundo-card: #ffffff;
+  --bg-fundo-elevado: #f1f5f9;
+  --cor-texto: #0f172a;
+  --cor-texto-secundario: #64748b;
+  --cor-borda: #e2e8f0;
 }
 
 /* ── Base ── */
