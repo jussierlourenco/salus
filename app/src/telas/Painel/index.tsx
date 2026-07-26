@@ -2,26 +2,30 @@ import { useState, useEffect } from 'react';
 import { Card, Badge, Carregando, VisualizadorDocumento } from '../../core/ui';
 import {
   Activity, Pill, AlertTriangle, Calendar, TrendingUp, Heart, Users, Clock,
-  CheckCircle2, FileText, Inbox, Image, Mic,
+  CheckCircle2, FileText, Inbox, Image, Mic, Stethoscope,
   ChevronRight, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { useNavigate } from 'react-router-dom';
+import { useConfiguracao } from '../../core/config/ConfigContext';
 import { listarMembros } from '../../modulos/membros/casos-de-uso/repositorioMembros';
 import { listarMedicamentos } from '../../modulos/medicamentos/casos-de-uso/repositorioMedicamentos';
 import { listarExames } from '../../modulos/exames/casos-de-uso/repositorioExames';
 import { listarVacinas } from '../../modulos/vacinas/casos-de-uso/repositorioVacinas';
 import { listarCaixaEntrada, atualizarCaixaEntrada } from '../../modulos/caixa-entrada/casos-de-uso/repositorioCaixaEntrada';
+import { listarEventos } from '../../core/database/repositorio';
 import { PainelTendencias } from '../../modulos/tendencias/PainelTendencias';
+import { DossieMedico } from '../../modulos/dossie/DossieMedico';
 import { calcularAlertas } from '../../dominio/alertas';
 import type { Membro } from '../../modulos/membros/entidades/membro';
 import type { Medicamento } from '../../modulos/medicamentos/entidades/medicamento';
 import type { Exame } from '../../modulos/exames/entidades/exame';
 import type { Vacina } from '../../modulos/vacinas/entidades/vacina';
+import type { Evento } from '../../core/database/repositorio';
 import type { CaixaEntradaItem } from '../../modulos/caixa-entrada/entidades/caixaEntrada';
 import type { Alerta } from '../../types/dominio';
 
-type SecaoAberta = 'membros' | 'medicamentos' | 'alertas' | 'tendencias' | null;
+type SecaoAberta = 'membros' | 'medicamentos' | 'alertas' | 'tendencias' | 'dossie' | null;
 
 const badgeVariante = { vencido: 'vencido' as const, vencendo_30d: 'alerta' as const, proximo_90d: 'neutro' as const };
 const badgeTexto = { vencido: 'Vencido', vencendo_30d: 'Vence em 30d', proximo_90d: 'Próximos 90d' };
@@ -133,6 +137,7 @@ function CardTimeline({
 export function Painel() {
   const { usuario } = useAuth();
   const navigate = useNavigate();
+  const { config } = useConfiguracao();
   const [carregando, setCarregando] = useState(true);
   const [secaoAberta, setSecaoAberta] = useState<SecaoAberta>(null);
 
@@ -140,6 +145,7 @@ export function Painel() {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [exames, setExames] = useState<Exame[]>([]);
   const [vacinas, setVacinas] = useState<Vacina[]>([]);
+  const [eventos, setEventos] = useState<Evento[]>([]);
   const [caixaEntrada, setCaixaEntrada] = useState<CaixaEntradaItem[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
 
@@ -151,17 +157,19 @@ export function Painel() {
       if (!usuario) return;
       setCarregando(true);
       try {
-        const [mList, medList, exList, vacList, ceList] = await Promise.all([
+        const [mList, medList, exList, vacList, evtList, ceList] = await Promise.all([
           listarMembros(usuario.uid),
           listarMedicamentos(usuario.uid),
           listarExames(usuario.uid),
           listarVacinas(usuario.uid),
+          listarEventos(usuario.uid),
           listarCaixaEntrada(usuario.uid),
         ]);
         setMembros(mList);
         setMedicamentos(medList);
         setExames(exList);
         setVacinas(vacList);
+        setEventos(evtList);
         setCaixaEntrada(ceList.filter((i) => i.status !== 'descartado'));
         setAlertas(calcularAlertas(mList, medList, vacList, []));
       } catch (err) {
@@ -204,7 +212,7 @@ export function Painel() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <button onClick={() => toggleSecao('membros')} className="text-left">
           <Card hover padding="sm" className={secaoAberta === 'membros' ? 'ring-2 ring-salus-500/40' : ''}>
             <div className="flex items-center gap-3">
@@ -234,6 +242,14 @@ export function Painel() {
             <div className="flex items-center gap-3">
               <TrendingUp size={22} className="text-salus-400 shrink-0" />
               <div><p className="text-2xl font-bold text-texto">{exames.length + vacinas.length}</p><p className="text-xs text-texto-secundario">Exames+Vacinas</p></div>
+            </div>
+          </Card>
+        </button>
+        <button onClick={() => toggleSecao('dossie')} className="text-left">
+          <Card hover padding="sm" className={secaoAberta === 'dossie' ? 'ring-2 ring-salus-500/40' : ''}>
+            <div className="flex items-center gap-3">
+              <Stethoscope size={22} className="text-salus-400 shrink-0" />
+              <div><p className="text-2xl font-bold text-texto">{eventos.length}</p><p className="text-xs text-texto-secundario">Eventos</p></div>
             </div>
           </Card>
         </button>
@@ -276,6 +292,17 @@ export function Painel() {
 
       {secaoAberta === 'tendencias' && (
         <PainelTendencias exames={exames} />
+      )}
+
+      {secaoAberta === 'dossie' && (
+        <DossieMedico
+          membros={membros}
+          medicamentos={medicamentos}
+          exames={exames}
+          vacinas={vacinas}
+          eventos={eventos}
+          configIA={config.provedor_ia}
+        />
       )}
 
       {secaoAberta === 'alertas' && (
