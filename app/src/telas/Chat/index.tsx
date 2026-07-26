@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useConfiguracao } from '../../core/config/ConfigContext';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { criarProvedor, type MensagemChat } from '../../core/ia/interface';
-import { listarMembros, listarMedicamentos } from '../../core/database/repositorio';
+import { listarMembros, listarMedicamentos, listarExames, listarVacinas, listarEventos } from '../../core/database/repositorio';
 
 interface Mensagem {
   id: string;
@@ -41,16 +41,61 @@ export function Chat() {
     async function carregarContexto() {
       if (!usuario) return;
       try {
-        const [membros, meds] = await Promise.all([
+        const [membros, meds, exames, vacinas, eventos] = await Promise.all([
           listarMembros(usuario.uid),
           listarMedicamentos(usuario.uid),
+          listarExames(usuario.uid),
+          listarVacinas(usuario.uid),
+          listarEventos(usuario.uid),
         ]);
 
-        const membrosTxt = membros.map((m) => `${m.nome} (${m.tipo}, id: ${m.id})`).join(', ');
-        const medsTxt = meds.map((m) => `${m.nome} (${m.dose || 'dose N/D'}, membroId: ${m.membro_id})`).join(', ');
+        const linhas: string[] = [];
 
-        const ctxStr = `Familiares cadastrados: ${membrosTxt || 'Nenhum'}. Medicamentos cadastrados: ${medsTxt || 'Nenhum'}.`;
-        setContextoFamilia(ctxStr);
+        linhas.push('=== FAMILIARES CADASTRADOS ===');
+        membros.forEach((m) => {
+          linhas.push(`- ${m.nome} (${m.tipo}, ${m.nascimento ? `nasc. ${m.nascimento}` : 'idade não informada'})`);
+          if (m.condicoes_ativas?.length) linhas.push(`  Condições: ${m.condicoes_ativas.join(', ')}`);
+          if (m.alergias?.length) linhas.push(`  Alergias: ${m.alergias.join(', ')}`);
+        });
+
+        if (meds.length) {
+          linhas.push('');
+          linhas.push('=== MEDICAMENTOS ===');
+          meds.forEach((m) => {
+            const membroNome = membros.find((x) => x.id === m.membro_id)?.nome ?? 'desconhecido';
+            linhas.push(`- ${m.nome} (${membroNome}) · ${m.dose ?? ''} · ${m.frequencia ?? ''} · Status: ${m.status}`);
+            if (m.motivo) linhas.push(`  Motivo: ${m.motivo}`);
+          });
+        }
+
+        if (exames.length) {
+          linhas.push('');
+          linhas.push('=== EXAMES ===');
+          exames.slice(-20).forEach((e) => {
+            const membroNome = membros.find((x) => x.id === e.membro_id)?.nome ?? 'desconhecido';
+            linhas.push(`- ${e.marcador} (${membroNome}): ${e.valor}${e.unidade ? ` ${e.unidade}` : ''}${e.flag ? ` [${e.flag}]` : ''}${e.data ? ` em ${e.data}` : ''}`);
+          });
+        }
+
+        if (vacinas.length) {
+          linhas.push('');
+          linhas.push('=== VACINAS ===');
+          vacinas.slice(-20).forEach((v) => {
+            const membroNome = membros.find((x) => x.id === v.membro_id)?.nome ?? 'desconhecido';
+            linhas.push(`- ${v.nome} (${membroNome})${v.aplicada_em ? ` · Aplicada: ${v.aplicada_em}` : ''}${v.proxima_em ? ` · Próxima: ${v.proxima_em}` : ''}`);
+          });
+        }
+
+        if (eventos.length) {
+          linhas.push('');
+          linhas.push('=== EVENTOS ===');
+          eventos.slice(-20).forEach((ev) => {
+            const membroNome = membros.find((x) => x.id === ev.membro_id)?.nome ?? 'desconhecido';
+            linhas.push(`- ${ev.descricao} (${membroNome}) · ${ev.tipo}${ev.data ? ` em ${ev.data}` : ''}`);
+          });
+        }
+
+        setContextoFamilia(linhas.join('\n') || 'Nenhum dado cadastrado ainda.');
       } catch (e) {
         console.warn('[Chat] Erro ao carregar contexto da família:', e);
       }

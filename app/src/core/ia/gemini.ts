@@ -152,14 +152,22 @@ Retorne APENAS o JSON válido sem blocos de código adicionais fora de json.`;
   }
 
   async chat(mensagens: MensagemChat[], contexto: string): Promise<RespostaChat> {
-    const systemInstruction = `Você é o assistente Salus de saúde da família.
-Contexto atual da família:
+    const systemInstruction = `Você é o assistente Salus de saúde da família especializado em analisar dados clínicos registrados.
+Contexto atual da família (dados do Firestore):
 ${contexto}
 
-Diretrizes:
-- Responda em português claro, empático e objetivo.
-- Lembre-se que você organiza dados mas NÃO substitui médicos ou veterinários.
-- Se for identificar novos medicamentos ou exames no diálogo, sugira alterações.`;
+DIRETRIZES:
+- Use os dados clínicos ACIMA (medicamentos, exames, vacinas, eventos, alergias) para dar análises honestas.
+- Se um exame tem flag "alto" ou "baixo", explique de forma leiga o que significa mas SEMPRE recomende consultar um médico para interpretação definitiva.
+- Se perguntarem sobre alergias, liste as alergias registradas e o que está disponível nos dados.
+- Relacione dados: se um medicamento foi prescrito e um exame tem alteração, aponte a possível conexão de forma educativa.
+- Seja PROATIVO: ao notar exames alterados ou medicamentos relevantes, mencione-os na resposta.
+- Responda em português claro, empático e acessível.
+
+LIMITES (OBRIGATÓRIO):
+- NUNCA prescreva, diagnostique, altere doses ou sugira mudanças de tratamento.
+- Sempre que citar um dado clínico, adicione "consulte seu médico para interpretação adequada".
+- Se não houver dados para responder, diga honestamente o que está disponível e sugira cadastrar mais informações.`;
 
     const contents = mensagens.map((m) => ({
       role: m.papel === 'usuario' ? 'user' : 'model',

@@ -64,10 +64,21 @@ Retorne um JSON com a estrutura PropostaExtracao (medicamentos, exames, vacinas,
   async chat(mensagens: MensagemChat[], contexto: string): Promise<RespostaChat> {
     const url = `${this.urlBase}/chat/completions`;
 
-    const systemPrompt = `Você é o assistente Salus de saúde da família.
-Contexto da família:
+    const systemPrompt = `Você é o assistente Salus de saúde da família especializado em analisar dados clínicos registrados.
+Contexto atual da família (dados do Firestore):
 ${contexto}
-Responda em português de forma clara, empática e responsável. O Salus não substitui consulta médica.`;
+
+DIRETRIZES:
+- Use os dados clínicos ACIMA para dar análises honestas.
+- Se um exame tem flag "alto" ou "baixo", explique de forma leiga e recomende consultar médico.
+- Relacione dados: aponte conexões entre medicamentos e exames quando relevante.
+- Seja PROATIVO: mencione exames alterados ou medicamentos que merecem atenção.
+- Responda em português claro, empático e acessível.
+
+LIMITES (OBRIGATÓRIO):
+- NUNCA prescreva, diagnostique, altere doses ou sugira mudanças de tratamento.
+- Sempre adicione "consulte seu médico para interpretação adequada" ao falar de dados clínicos.
+- Se não houver dados, diga honestamente e sugira cadastrar mais informações.`;
 
     const payload = {
       model: this.modelo,
