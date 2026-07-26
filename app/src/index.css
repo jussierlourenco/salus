@@ -49,7 +49,7 @@
 }
 
 /* ── Claro ── */
-:root[data-theme="light"] {
+:root[data-theme="claro"] {
   --bg-fundo: #f8fafc;
   --bg-fundo-card: #ffffff;
   --bg-fundo-elevado: #f1f5f9;
@@ -126,7 +126,7 @@ body {
   border: 1px solid rgba(51, 65, 85, 0.5);
 }
 
-:root[data-theme="light"] .glass {
+:root[data-theme="claro"] .glass {
   background: rgba(255, 255, 255, 0.75);
   border: 1px solid rgba(226, 232, 240, 0.8);
 }

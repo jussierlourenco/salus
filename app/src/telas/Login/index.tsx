@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { Botao } from '../../core/ui';
-import { Stethoscope, Shield, Smartphone, Cloud } from 'lucide-react';
+import { useTema } from '../../core/ui/useTema';
+import { Stethoscope, Shield, Smartphone, Cloud, Sun, Moon } from 'lucide-react';
 import { useEffect } from 'react';
 
 export function Login() {
   const { usuario, entrar, carregando } = useAuth();
+  const { tema, alternarTema } = useTema();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,6 +18,18 @@ export function Login() {
 
   return (
     <div className="min-h-dvh flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Theme Toggle */}
+      <button
+        onClick={alternarTema}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-xl touch-target
+                   flex items-center justify-center
+                   text-texto-secundario hover:text-texto hover:bg-fundo-elevado/50
+                   border border-transparent transition-all duration-200"
+        aria-label={tema === 'escuro' ? 'Modo claro' : 'Modo escuro'}
+      >
+        {tema === 'escuro' ? <Sun size={20} /> : <Moon size={20} />}
+      </button>
+
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-salus-600/10 blur-3xl" />
