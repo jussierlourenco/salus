@@ -34,6 +34,10 @@ export interface CaixaEntradaItem {
   mime_type: string;
   status: StatusCaixaEntrada;
   proposta?: PropostaExtracao;
+  /** ID do arquivo no IndexedDB local (storage local no navegador). */
+  storage_id?: string;
+  /** 'indexeddb' | 'drive' | 'manual' */
+  storage_tipo?: string;
   criado_em: string;
   atualizado_em: string;
 }

@@ -14,6 +14,8 @@ import { salvarExame } from '../../modulos/exames/casos-de-uso/repositorioExames
 import { salvarVacina } from '../../modulos/vacinas/casos-de-uso/repositorioVacinas';
 import { salvarEvento } from '../../core/database/repositorio';
 import { salvarCaixaEntrada } from '../../modulos/caixa-entrada/casos-de-uso/repositorioCaixaEntrada';
+import { salvarArquivoLocal } from '../../core/storage/indexedDB';
+import { baixarArquivo } from '../../core/storage/exportImport';
 import type { Membro } from '../../modulos/membros/entidades/membro';
 import type { PropostaExtracao } from '../../types/dominio';
 
@@ -324,12 +326,25 @@ export function CaixaDeEntrada() {
           salvos++;
         }
 
+        // Salva o arquivo original no IndexedDB (navegador)
+        const arquivoId = `ce_${proposta.id}`;
+        await salvarArquivoLocal(uid, arquivoId, proposta.arquivo);
+
+        // Download automático do original pro dispositivo
+        try {
+          baixarArquivo(proposta.arquivo, proposta.arquivo.name);
+        } catch {
+          // Falha no download não interrompe o fluxo
+        }
+
         // Registra o item processado na caixa de entrada
         await salvarCaixaEntrada(uid, {
           nome_arquivo: proposta.arquivo.name,
           mime_type: proposta.arquivo.type,
           status: 'confirmado',
           proposta: proposta.proposta,
+          storage_id: arquivoId,
+          storage_tipo: 'indexeddb',
         });
       } catch (err) {
         erros.push(`${proposta.arquivo.name}: ${err instanceof Error ? err.message : 'Erro ao salvar'}`);
@@ -337,7 +352,7 @@ export function CaixaDeEntrada() {
     }
 
     if (erros.length === 0) {
-      setMsgSucesso(`${salvos} registro(s) salvos com sucesso no Firestore!`);
+      setMsgSucesso(`${salvos} registro(s) salvos! Os arquivos originais foram baixados para o seu dispositivo.`);
     } else {
       setMsgErro(`${salvos} registro(s) salvos, mas ${erros.length} arquivo(s) tiveram erro: ${erros.join('; ')}`);
     }

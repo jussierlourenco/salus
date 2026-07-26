@@ -113,6 +113,8 @@ export interface CaixaEntradaItem {
   membro_id?: string;
   tipo_documento?: string; // 'exame' | 'laudo' | 'receita' | 'requisicao' | 'audio' | 'outro'
   proposta?: PropostaExtracao;
+  storage_id?: string;
+  storage_tipo?: string;
   criado_em: string;
   atualizado_em: string;
 }
