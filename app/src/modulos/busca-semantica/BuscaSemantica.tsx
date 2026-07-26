@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import {
-  Search, Sparkles, FileText, MessageCircle, ChevronRight,
-  Image, Mic, Loader2, X, AlertTriangle,
+  Search, Sparkles, FileText,
+  Loader2, X, AlertTriangle,
 } from 'lucide-react';
 import { Card, Badge, Botao } from '../../core/ui';
 import { criarProvedor } from '../../core/ia/interface';
@@ -32,15 +32,12 @@ function extrairTexto(md?: string): string {
 }
 
 function destacar(texto: string, termos: string[]): string {
-  let resultado = texto;
-  for (const termo of termos) {
-    const regex = new RegExp(`(${termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    resultado = resultado.replace(regex, '±±±$1±±±');
-  }
-  resultado = resultado.replace(/±±±/g, (match, offset) =>
-    offset % 3 === 0 ? '<mark class="bg-salus-600/30 text-salus-300 rounded-sm px-0.5">' : '</mark>',
-  );
-  return resultado;
+  const parts = texto.split(new RegExp(`(${termos.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi'));
+  return parts.map((part) =>
+    termos.some(t => t.toLowerCase() === part.toLowerCase())
+      ? `<mark class="bg-salus-600/30 text-salus-300 rounded-sm px-0.5">${part}</mark>`
+      : part,
+  ).join('');
 }
 
 function gerarTermos(query: string): string[] {

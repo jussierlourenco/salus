@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, type ComponentType } from 'react';
+import { useState, useCallback, useEffect, useMemo, type ComponentType } from 'react';
 import { Card, Botao, Badge, Carregando } from '../../core/ui';
 import {
   Inbox, Upload, FileText, Image, Mic, Sparkles, X,

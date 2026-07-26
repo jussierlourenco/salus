@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import {
-  Stethoscope, User, Calendar, Pill, Activity, Heart, ChevronDown, ChevronUp,
-  Sparkles, AlertTriangle, RefreshCw, Clock, Filter,
+  Stethoscope, Calendar, Pill, Activity, Heart, ChevronDown, ChevronUp,
+  Sparkles, AlertTriangle, RefreshCw, Filter,
 } from 'lucide-react';
-import { Card, Badge, Botao, Carregando } from '../../core/ui';
+import { Card, Badge, Botao } from '../../core/ui';
 import { criarProvedor } from '../../core/ia/interface';
 import type { ConfigProvedorIA } from '../../types/dominio';
 import type { Membro } from '../membros/entidades/membro';
@@ -322,11 +322,19 @@ export function DossieMedico({
 
 // ── Subcomponente de dados ──
 
+interface DadosFiltrados {
+  membros: Membro[];
+  eventos: Evento[];
+  exames: Exame[];
+  medicamentos: Medicamento[];
+  vacinas: Vacina[];
+}
+
 function SecaoDados({
   dados,
   eventos,
 }: {
-  dados: ReturnType<typeof useMemo> extends (...args: any[]) => infer R ? R : never;
+  dados: DadosFiltrados;
   eventos: Evento[];
 }) {
   const [aberto, setAberto] = useState<string | null>(null);

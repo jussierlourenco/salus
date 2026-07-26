@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
-import type { Exame } from '../exames/entidades/exame';
+import { useState, useMemo, useRef } from 'react';
+import type { Exame, FlagExame } from '../exames/entidades/exame';
 import {
   parseValorNumerico,
   formatarDataCurta,
@@ -18,7 +18,7 @@ interface PontoGrafico {
   valor: number;
   valorOriginal: string;
   unidade: string;
-  flag: string;
+  flag: FlagExame;
   faixa: { min: number; max: number } | null;
 }
 
@@ -34,21 +34,20 @@ export function GraficoTendencia({ exames, marcador }: GraficoTendenciaProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   const dados = useMemo(() => {
-    return exames
-      .map((e) => {
-        const valorNum = parseValorNumerico(e.valor);
-        if (valorNum === null) return null;
-        return {
-          data: e.data,
-          valor: valorNum,
-          valorOriginal: e.valor,
-          unidade: e.unidade || '',
-          flag: e.flag,
-          faixa: extrairFaixaReferencia(e.faixa_referencia_laudo),
-        };
-      })
-      .filter((d): d is PontoGrafico => d !== null)
-      .sort((a, b) => a.data.localeCompare(b.data));
+    const mapeados: PontoGrafico[] = [];
+    for (const e of exames) {
+      const valorNum = parseValorNumerico(e.valor);
+      if (valorNum === null) continue;
+      mapeados.push({
+        data: e.data,
+        valor: valorNum,
+        valorOriginal: e.valor,
+        unidade: e.unidade || '',
+        flag: e.flag,
+        faixa: extrairFaixaReferencia(e.faixa_referencia_laudo),
+      });
+    }
+    return mapeados.sort((a, b) => a.data.localeCompare(b.data));
   }, [exames]);
 
   const { escalas, yTicks } = useMemo(() => {
