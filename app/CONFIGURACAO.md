@@ -39,7 +39,7 @@ Isso é diferente da chave de IA: você configura isso **uma vez**, como variáv
    - Tipo de usuário: **Externo** (a menos que você use Google Workspace só internamente).
    - Preencha nome do app, e-mail de suporte, logo (opcional).
    - Em "Escopos", adicione `https://www.googleapis.com/auth/drive.file` (o mais restrito — o app só acessa arquivos que ele mesmo cria).
-   - Enquanto o app estiver em modo "Teste", só as contas Google que você adicionar em "Usuários de teste" conseguem autorizar. Para liberar geral, é preciso publicar o app (o Google pode pedir verificação, dependendo do escopo — `drive.file` costuma ser elegível a verificação simplificada).
+   - Enquanto o app estiver em modo "Teste", só as contas Google que você adicionar em "Usuários de teste" conseguem autorizar (até 100). Para compartilhar com qualquer pessoa, veja "Publicar para o público" logo abaixo.
 4. **Crie a credencial**: "APIs e serviços" → "Credenciais" → "+ Criar credenciais" → "ID do cliente OAuth".
    - Tipo de aplicativo: **Aplicativo da Web**.
    - Em "Origens JavaScript autorizadas", adicione as URLs de onde o app roda:
@@ -47,6 +47,17 @@ Isso é diferente da chave de IA: você configura isso **uma vez**, como variáv
      - a URL de produção (ex: `https://seu-app.vercel.app`)
    - Não é preciso preencher "URIs de redirecionamento" — o fluxo usado (Google Identity Services / token client) não redireciona, abre um pop-up.
 5. Copie o **Client ID** gerado (termina em `.apps.googleusercontent.com`) — **não é o "Client Secret"**, esse não é usado pelo app, já que a autorização acontece inteiramente no navegador.
+
+### Publicar para o público (quando quiser compartilhar além dos usuários de teste)
+
+Enquanto o app está em modo "Teste" no Google Cloud, só quem você adicionar manualmente como "usuário de teste" (até 100 e-mails) consegue conectar o Drive — ideal pra validar com a família antes de divulgar. Quando quiser abrir para qualquer pessoa:
+
+1. Na tela de consentimento OAuth, clique em **"Publicar app"**. Isso tira o app do modo Teste.
+2. Como o escopo usado é só `drive.file` (o mais restrito que existe — o app nunca vê o resto do Drive da pessoa, só os arquivos que ele mesmo cria), o Google classifica isso como **escopo não-sensível**. Na prática isso significa: você **não precisa passar pelo processo pesado de verificação de segurança** (o que exige vídeo demonstrativo, revisão manual, e é reservado para escopos sensíveis/restritos como acesso total ao Drive, Gmail, etc.).
+3. Ainda assim, o Google pode pedir uma verificação básica de identidade do desenvolvedor (confirmar domínio, e-mail de contato) — mais rápido que a revisão completa, mas conte alguns dias de antecedência antes de divulgar amplamente.
+4. Até a publicação ser aprovada, usuários fora da lista de teste veem uma tela de aviso do Google ("app não verificado") com um link para prosseguir mesmo assim — funciona, mas assusta quem não te conhece. Vale planejar esse prazo antes do lançamento público.
+
+Enquanto isso não acontece, você pode ir liberando por e-mail (adicionando cada novo usuário como "usuário de teste") sem custo nenhum e sem esperar aprovação nenhuma — é a forma mais rápida de validar o produto antes de investir tempo na publicação.
 
 ### Onde colocar
 
