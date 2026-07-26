@@ -18,11 +18,31 @@ export const CONFIG_PADRAO: ConfigUsuario = {
   },
 };
 
+const MODELOS_DEPRECIADOS = [
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-pro',
+  'gemini-1.5-flash',
+];
+
 export async function obterConfigUsuario(uid: string): Promise<ConfigUsuario> {
   try {
     const snap = await getDoc(docConfig(uid));
     if (snap.exists()) {
-      return { ...CONFIG_PADRAO, ...snap.data() } as ConfigUsuario;
+      const config = { ...CONFIG_PADRAO, ...snap.data() } as ConfigUsuario;
+
+      // Migração automática: modelo deprecated → gemini-2.5-flash
+      if (
+        config.provedor_ia &&
+        MODELOS_DEPRECIADOS.includes(config.provedor_ia.modelo)
+      ) {
+        config.provedor_ia = { ...config.provedor_ia, modelo: 'gemini-2.5-flash' };
+        // Salva a correção no Firestore em segundo plano
+        salvarConfigUsuario(uid, config).catch(() => {});
+      }
+
+      return config;
     }
   } catch (err) {
     console.warn('[Config] Erro ao carregar do Firestore, usando padrão:', err);
