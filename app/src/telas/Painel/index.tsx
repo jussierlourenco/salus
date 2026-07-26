@@ -10,8 +10,13 @@ import {
   Users,
   Clock,
   CheckCircle2,
+  FileText,
+  FlaskConical,
+  Syringe,
+  Inbox,
 } from 'lucide-react';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { useNavigate } from 'react-router-dom';
 import { listarMembros } from '../../modulos/membros/casos-de-uso/repositorioMembros';
 import { listarMedicamentos } from '../../modulos/medicamentos/casos-de-uso/repositorioMedicamentos';
 import { listarExames } from '../../modulos/exames/casos-de-uso/repositorioExames';
@@ -44,6 +49,7 @@ export function Painel() {
   const [exames, setExames] = useState<Exame[]>([]);
   const [vacinas, setVacinas] = useState<Vacina[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function carregarDados() {
@@ -161,6 +167,110 @@ export function Painel() {
               </div>
             ))}
           </div>
+        )}
+      </Card>
+
+      {/* Últimos Registros */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <FileText size={18} className="text-salus-400" />
+          <h2 className="font-semibold text-texto">Últimos Registros</h2>
+          {medicamentos.length + exames.length + vacinas.length > 0 && (
+            <Badge variante="neutro">
+              {medicamentos.length + exames.length + vacinas.length} total
+            </Badge>
+          )}
+        </div>
+
+        {medicamentos.length === 0 && exames.length === 0 && vacinas.length === 0 ? (
+          <div className="p-6 text-center text-texto-secundario space-y-2 border border-borda/50 rounded-[var(--radius-md)] bg-fundo-elevado/20">
+            <Inbox size={32} className="mx-auto text-texto-secundario/40 mb-1" />
+            <p className="text-sm font-medium text-texto">Nenhum registro ainda</p>
+            <p className="text-xs">
+              Use a{' '}
+              <button onClick={() => navigate('/caixa-de-entrada')} className="text-salus-400 hover:underline">
+                Caixa de Entrada
+              </button>
+              {' '}para enviar documentos e extrair dados automaticamente.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Medicamentos recentes */}
+            {medicamentos
+              .sort((a, b) => b.criado_em.localeCompare(a.criado_em))
+              .slice(0, 5)
+              .map((med) => {
+                const membro = membros.find((m) => m.id === med.membro_id);
+                return (
+                  <div key={med.id} className="flex items-start gap-3 p-3 rounded-[var(--radius-md)] bg-fundo-elevado/40 border border-borda/60 mb-2">
+                    <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-alerta-600/10 flex items-center justify-center shrink-0">
+                      <Pill size={16} className="text-alerta-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-texto">{med.nome}</p>
+                      <p className="text-xs text-texto-secundario">
+                        {membro?.nome ?? 'Membro'} · {med.dose ?? ''}{med.frequencia ? ` · ${med.frequencia}` : ''}
+                      </p>
+                    </div>
+                    <Badge variante={med.status === 'em_uso' ? 'salus' : 'neutro'}>
+                      {med.status === 'em_uso' ? 'Em uso' : med.status === 'prescrito' ? 'Prescrito' : 'Descont.'}
+                    </Badge>
+                  </div>
+                );
+              })}
+
+            {/* Exames recentes */}
+            {exames
+              .sort((a, b) => b.criado_em.localeCompare(a.criado_em))
+              .slice(0, 5)
+              .map((ex) => {
+                const membro = membros.find((m) => m.id === ex.membro_id);
+                return (
+                  <div key={ex.id} className="flex items-start gap-3 p-3 rounded-[var(--radius-md)] bg-fundo-elevado/40 border border-borda/60 mb-2">
+                    <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-salus-600/10 flex items-center justify-center shrink-0">
+                      <FlaskConical size={16} className="text-salus-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-texto">{ex.marcador}</p>
+                      <p className="text-xs text-texto-secundario">
+                        {membro?.nome ?? 'Membro'} · {ex.valor}{ex.unidade ? ` ${ex.unidade}` : ''}
+                        {ex.flag ? ` (${ex.flag})` : ''}
+                      </p>
+                    </div>
+                    <Badge variante={
+                      ex.flag === 'alto' ? 'vencido' :
+                      ex.flag === 'baixo' ? 'alerta' : 'neutro'
+                    }>
+                      {ex.flag ?? '--'}
+                    </Badge>
+                  </div>
+                );
+              })}
+
+            {/* Vacinas recentes */}
+            {vacinas
+              .sort((a, b) => b.criado_em.localeCompare(a.criado_em))
+              .slice(0, 5)
+              .map((vac) => {
+                const membro = membros.find((m) => m.id === vac.membro_id);
+                return (
+                  <div key={vac.id} className="flex items-start gap-3 p-3 rounded-[var(--radius-md)] bg-fundo-elevado/40 border border-borda/60 mb-2">
+                    <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-purple-600/10 flex items-center justify-center shrink-0">
+                      <Syringe size={16} className="text-purple-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-texto">{vac.nome}</p>
+                      <p className="text-xs text-texto-secundario">
+                        {membro?.nome ?? 'Membro'}
+                        {vac.aplicada_em ? ` · Aplicada: ${vac.aplicada_em}` : ''}
+                        {vac.proxima_em ? ` · Próxima: ${vac.proxima_em}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+          </>
         )}
       </Card>
     </div>
