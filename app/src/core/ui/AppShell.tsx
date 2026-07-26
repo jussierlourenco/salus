@@ -114,7 +114,7 @@ export function AppShell() {
 
       {/* ── Main Content ── */}
       <main className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto pb-20 lg:pb-6">
+        <div className="flex-1 overflow-y-auto pb-24 pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-6">
           <div className="max-w-5xl mx-auto px-4 py-6">
             <Outlet />
           </div>
