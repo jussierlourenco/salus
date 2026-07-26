@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Card, Badge, Botao, EstadoVazio, Carregando, Campo } from '../../core/ui';
 import { Users, Plus, Dog, Cat, User, ChevronRight, RefreshCw, X } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
@@ -165,11 +166,11 @@ export function Membros() {
         </div>
       )}
 
-      {/* Bottom Sheet — Cadastrar Membro */}
-      {modalAberto && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setModalAberto(false)} />
-          <div className="relative bg-fundo-card border-t border-borda rounded-t-[var(--radius-xl)] p-6 max-h-[85dvh] overflow-y-auto shadow-2xl animate-slide-up">
+      {/* Modal — Cadastrar Membro (portal para evitar overflow do layout pai) */}
+      {modalAberto && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setModalAberto(false)} />
+          <div className="relative bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-lg w-full max-h-[90dvh] overflow-y-auto shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-texto flex items-center gap-2">
                 <Users size={20} className="text-salus-500" />
@@ -272,7 +273,8 @@ export function Membros() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
