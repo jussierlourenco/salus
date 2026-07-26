@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Card, Badge, Botao, EstadoVazio, Carregando, Campo } from '../../core/ui';
-import { Users, Plus, Dog, Cat, User, ChevronRight, RefreshCw, X } from 'lucide-react';
+import { Users, Plus, Dog, Cat, User, ChevronRight, RefreshCw, X, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { listarMembros, salvarMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
+import { listarMembros, salvarMembro, excluirMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
 import type { Membro, TipoMembro, Vinculo } from '../../modulos/membros/entidades/membro';
 
 const iconesTipo = {
@@ -26,9 +26,14 @@ export function Membros() {
   const [membros, setMembros] = useState<Membro[]>([]);
   const [carregando, setCarregando] = useState(true);
 
-  // Modal de adição
+  // Modal de adição/edição
   const [modalAberto, setModalAberto] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+
+  // Modal de exclusão
+  const [membroExcluir, setMembroExcluir] = useState<Membro | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   // Campos do formulário
   const [nome, setNome] = useState('');
@@ -57,6 +62,32 @@ export function Membros() {
     carregar();
   }, [usuario]);
 
+  const fecharModal = () => {
+    setModalAberto(false);
+    setEditandoId(null);
+    setNome('');
+    setTipo('pessoa');
+    setNascimento('');
+    setVinculo('biologico');
+    setTipoSanguineo('');
+    setRaca('');
+    setCondicoesText('');
+    setAlergiasText('');
+  };
+
+  const abrirModalEdicao = (membro: Membro) => {
+    setEditandoId(membro.id);
+    setNome(membro.nome);
+    setTipo(membro.tipo);
+    setNascimento(membro.nascimento ?? '');
+    setVinculo(membro.vinculo);
+    setTipoSanguineo(membro.tipo_sanguineo ?? '');
+    setRaca(membro.raca ?? '');
+    setCondicoesText((membro.condicoes_ativas ?? []).join(', '));
+    setAlergiasText((membro.alergias ?? []).join(', '));
+    setModalAberto(true);
+  };
+
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!usuario || !nome.trim()) return;
@@ -67,6 +98,7 @@ export function Membros() {
       const alergias = alergiasText.split(',').map((s) => s.trim()).filter(Boolean);
 
       await salvarMembro(usuario.uid, {
+        id: editandoId ?? undefined,
         nome: nome.trim(),
         tipo,
         nascimento: nascimento || undefined,
@@ -78,18 +110,27 @@ export function Membros() {
         relacoes: [],
       });
 
-      // Limpar formulário e recarregar
-      setNome('');
-      setNascimento('');
-      setRaca('');
-      setCondicoesText('');
-      setAlergiasText('');
-      setModalAberto(false);
+      fecharModal();
       await carregar();
     } catch (err) {
       alert('Erro ao salvar membro: ' + (err as Error).message);
     } finally {
       setSalvando(false);
+    }
+  };
+
+  const handleExcluir = async () => {
+    if (!usuario || !membroExcluir) return;
+
+    setExcluindo(true);
+    try {
+      await excluirMembro(usuario.uid, membroExcluir.id);
+      setMembroExcluir(null);
+      await carregar();
+    } catch (err) {
+      alert('Erro ao excluir membro: ' + (err as Error).message);
+    } finally {
+      setExcluindo(false);
     }
   };
 
@@ -131,8 +172,8 @@ export function Membros() {
             const Icone = iconesTipo[membro.tipo] ?? User;
             const cor = coresTipo[membro.tipo] ?? coresTipo.outro;
             return (
-              <NavLink key={membro.id} to={`/membro/${membro.id}`}>
-                <Card hover className="group h-full">
+              <Card key={membro.id} hover className="group h-full relative">
+                <NavLink to={`/membro/${membro.id}`} className="block">
                   <div className="flex items-start gap-4">
                     <div className={`w-12 h-12 rounded-[var(--radius-lg)] bg-gradient-to-br ${cor} flex items-center justify-center shadow-lg shrink-0`}>
                       <Icone size={24} className="text-white" />
@@ -159,24 +200,46 @@ export function Membros() {
                       )}
                     </div>
                   </div>
-                </Card>
-              </NavLink>
+                </NavLink>
+                <div className="flex items-center gap-1 mt-3 pt-3 border-t border-borda">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      abrirModalEdicao(membro);
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-medium text-texto-secundario hover:text-texto px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-fundo-elevado transition-colors"
+                  >
+                    <Pencil size={14} />
+                    Editar
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setMembroExcluir(membro);
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-medium text-texto-secundario hover:text-vencido-500 px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-fundo-elevado transition-colors"
+                  >
+                    <Trash2 size={14} />
+                    Excluir
+                  </button>
+                </div>
+              </Card>
             );
           })}
         </div>
       )}
 
-      {/* Modal — Cadastrar Membro (portal para evitar overflow do layout pai) */}
+      {/* Modal — Cadastrar/Editar Membro (portal para evitar overflow do layout pai) */}
       {modalAberto && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setModalAberto(false)} />
+          <div className="absolute inset-0 bg-black/50" onClick={fecharModal} />
           <div className="relative bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-lg w-full max-h-[90dvh] overflow-y-auto shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-texto flex items-center gap-2">
                 <Users size={20} className="text-salus-500" />
-                Cadastrar Membro
+                {editandoId ? 'Editar Membro' : 'Cadastrar Membro'}
               </h3>
-              <button onClick={() => setModalAberto(false)} className="text-texto-secundario hover:text-texto p-2 -mr-2">
+              <button onClick={fecharModal} className="text-texto-secundario hover:text-texto p-2 -mr-2">
                 <X size={20} />
               </button>
             </div>
@@ -259,7 +322,7 @@ export function Membros() {
               />
 
               <div className="flex justify-end gap-2 pt-3 border-t border-borda">
-                <Botao variante="secundario" tamanho="sm" type="button" onClick={() => setModalAberto(false)}>
+                <Botao variante="secundario" tamanho="sm" type="button" onClick={fecharModal}>
                   Cancelar
                 </Botao>
                 <Botao
@@ -268,10 +331,49 @@ export function Membros() {
                   disabled={salvando || !nome.trim()}
                   icone={salvando ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}
                 >
-                  {salvando ? 'Salvando...' : 'Salvar'}
+                  {salvando ? 'Salvando...' : editandoId ? 'Salvar Alterações' : 'Salvar'}
                 </Botao>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal — Confirmar Exclusão */}
+      {membroExcluir && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMembroExcluir(null)} />
+          <div className="relative bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-sm w-full shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-texto flex items-center gap-2">
+                <AlertTriangle size={20} className="text-vencido-500" />
+                Excluir Membro
+              </h3>
+              <button onClick={() => setMembroExcluir(null)} className="text-texto-secundario hover:text-texto p-2 -mr-2">
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-texto-secundario">
+              Tem certeza que deseja excluir <strong className="text-texto">{membroExcluir.nome}</strong>? Esta ação não pode ser desfeita.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-borda">
+              <Botao variante="secundario" tamanho="sm" type="button" onClick={() => setMembroExcluir(null)}>
+                Cancelar
+              </Botao>
+              <Botao
+                variante="perigo"
+                tamanho="sm"
+                type="button"
+                disabled={excluindo}
+                onClick={handleExcluir}
+                icone={excluindo ? <RefreshCw size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              >
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </Botao>
+            </div>
           </div>
         </div>,
         document.body
