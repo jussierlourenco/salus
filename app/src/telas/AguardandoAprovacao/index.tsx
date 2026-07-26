@@ -21,11 +21,10 @@ export function AguardandoAprovacao() {
 
           <div>
             <h1 className="text-2xl font-bold text-texto mb-2">
-              Cadastro em Análise
+              Aguardando Liberação
             </h1>
             <p className="text-texto-secundario text-sm leading-relaxed">
-              Seu cadastro foi enviado e está aguardando aprovação do administrador.
-              Você receberá acesso assim que for aprovado.
+              Seu cadastro foi enviado com sucesso! O administrador vai liberar seu acesso dentro de instantes.
             </p>
           </div>
 
@@ -39,10 +38,14 @@ export function AguardandoAprovacao() {
             <div className="flex items-center gap-3 p-3 rounded-[var(--radius-md)] bg-fundo/50 border border-borda/50">
               <Shield size={16} className="text-salus-400 shrink-0" />
               <p className="text-sm text-texto-secundario">
-                Apenas o administrador pode liberar novos acessos.
+                Assim que for aprovado, você poderá acessar todos os recursos do Salus.
               </p>
             </div>
           </div>
+
+          <p className="text-sm text-texto-secundario italic">
+            Tente acessar novamente em alguns instantes.
+          </p>
 
           <Botao
             variante="secundario"
