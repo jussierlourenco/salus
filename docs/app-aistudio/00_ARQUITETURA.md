@@ -244,6 +244,24 @@ Regra de ouro do processo: **um prompt = um entregável testável**. Depois de c
 
 ---
 
+## 7.1 Status de implementação — auditoria de 2026-07-25
+
+Uma auditoria arquitetural do código em `app/src` contra este documento encontrou o app **hoje 100% client-side** (Vite + React + Firebase JS SDK direto no navegador, sem servidor/API própria) — o que diverge da premissa de §2.1 e §3.1 ("o servidor é o único lugar que fala com qualquer provedor de IA"). Registro do estado real, para não perder de vista o que falta:
+
+| Regra do documento | Status real | Observação |
+|---|---|---|
+| Isolamento por `uid` no modelo de dados | OK | Todos os repositórios em `app/src/modulos/*/casos-de-uso` e `app/src/core/database/repositorio.ts` escrevem só sob `usuarios/{uid}/...` |
+| Regras de segurança do Firestore (§4) | **Corrigido nesta auditoria** | `app/firestore.rules` criado, espelhando a regra do §4. Falta associar o projeto (`firebase use <project-id>`) e rodar `firebase deploy --only firestore:rules` — não há acesso ao console/CLI do Firebase a partir daqui |
+| IA chamada só pelo servidor (§3.1) | **Violado** | `core/ia/gemini.ts` e `core/ia/openaiCompat.ts` chamam a API do provedor direto do navegador; a chave do usuário roda no cliente (inclusive na query string, no caso do Gemini). Corrigir exige criar um backend real (ex.: rotas serverless na Vercel), fora do escopo desta rodada |
+| `drive_refresh_token` nunca chega ao cliente (§4) | **Parcialmente corrigido** | Sem backend, o token precisa transitar pelo cliente para funcionar — mas ele deixou de ser persistido em `localStorage` (`ConfigContext.tsx`, função `paraCacheSemSegredos`); continua visível/editável em Ajustes e presente no documento Firestore lido pelo cliente |
+| `<PainelDeProposta>` / `aplicarProposta()` (§5) | Não implementado | Componente existe (`componentes/PainelDeProposta.tsx`) mas não é usado por nenhuma tela; a Caixa de Entrada ainda não tem os handlers de upload/extração ligados |
+| Painel `/admin` (§6) | Não implementado | Nenhuma rota `/admin` no app ainda |
+| Duplicação `core/` vs `servicos/` | **Corrigido** | `app/src/servicos/*` e `app/src/contextos/ConfigContext.tsx` eram cópias mortas do que já existe em `core/` — removidos; o único arquivo vivo dessa árvore (`servicos/firestore/repositorio.ts`) foi movido para `core/database/repositorio.ts` |
+
+**Pendências que seguem abertas para uma próxima rodada:** mover chamadas de IA e a troca do `refresh_token` do Drive para um backend server-side (item mais estrutural, muda o modelo de deploy do zero); deployar `firestore.rules` no projeto real; ligar a Caixa de Entrada ao `<PainelDeProposta>`.
+
+---
+
 ## 8. Publicação, agora sem o problema do custo de IA
 
 Com BYOK e Drive implementados (e auditados em P12), compartilhar o app deixa de custar IA e de custar armazenamento para você — cada chamada ao Gemini sai da cota do usuário, e cada arquivo vive no Drive dele. O que continua sob sua conta, e precisa ser monitorado, é só o **uso de Firestore/Authentication** do seu projeto Firebase (dado estruturado, leve):
@@ -258,7 +276,7 @@ Verifique os limites atuais no [console de preços do Firebase](https://firebase
 
 ### Checklist antes de tornar público
 
-- [ ] Regras de segurança do Firestore testadas: um usuário autenticado **não consegue** ler/escrever dado de outro `uid` (P0 e P12)
+- [x] Regras de segurança do Firestore escritas (`app/firestore.rules`, ver §7.1) — [ ] falta deployar no projeto Firebase real e testar que um usuário autenticado **não consegue** ler/escrever dado de outro `uid` (P0 e P12)
 - [ ] App testado **sem nenhuma chave de IA cadastrada**: onboarding, cadastro de membros, edição de Ficha/Medicamentos/Exames/Histórico, upload manual de documento e Painel funcionam de ponta a ponta (P18)
 - [ ] Fluxo de BYOK completo e multi-provedor: sem chave própria cadastrada, só Chat e extração automática ficam bloqueados, com instrução clara de como obter uma chave gratuita (Gemini, Groq, OpenRouter ou Mistral) — ver §3.1 e P17
 - [ ] Fluxo de Drive completo: sem conectar o Drive, o upload de documentos fica bloqueado com instrução clara; o `refresh_token` nunca é exposto ao cliente

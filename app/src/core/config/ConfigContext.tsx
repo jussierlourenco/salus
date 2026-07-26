@@ -14,10 +14,22 @@ import {
   listarExames,
   listarVacinas,
   listarEventos,
-} from '../../servicos/firestore/repositorio';
+} from '../database/repositorio';
 import { exportarParaZip, baixarArquivo } from '../storage/exportImport';
 
 const STORAGE_KEY = 'salus_config_usuario';
+
+/**
+ * localStorage é só cache de leitura (evita flash de UI vazia); nunca deve reter
+ * segredos (chave de IA, refresh_token do Drive) além da sessão em memória.
+ */
+function paraCacheSemSegredos(config: ConfigUsuario): ConfigUsuario {
+  const { drive_refresh_token: _t, ...resto } = config;
+  return {
+    ...resto,
+    provedor_ia: config.provedor_ia ? { ...config.provedor_ia, chave: '' } : config.provedor_ia,
+  };
+}
 
 interface ConfigContexto {
   config: ConfigUsuario;
@@ -57,7 +69,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       if (ativo) {
         setConfig(remoto);
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(remoto));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(paraCacheSemSegredos(remoto)));
         } catch (e) {
           console.warn('[ConfigContext] Falha ao salvar no localStorage:', e);
         }
@@ -79,7 +91,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     setConfig(nova);
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nova));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(paraCacheSemSegredos(nova)));
     } catch (e) {
       console.warn('[ConfigContext] Falha ao salvar no localStorage:', e);
     }
@@ -99,7 +111,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     setConfig(nova);
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nova));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(paraCacheSemSegredos(nova)));
     } catch (e) {
       console.warn('[ConfigContext] Falha ao salvar no localStorage:', e);
     }

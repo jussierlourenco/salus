@@ -35,7 +35,7 @@ export {
 } from '../../modulos/caixa-entrada/casos-de-uso/repositorioCaixaEntrada';
 
 import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
-import { db } from '../../core/database/firebase';
+import { db } from './firebase';
 
 export interface Evento {
   id: string;

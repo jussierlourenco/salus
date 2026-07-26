@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useConfiguracao } from '../../core/config/ConfigContext';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { criarProvedor, type MensagemChat } from '../../core/ia/interface';
-import { listarMembros, listarMedicamentos } from '../../servicos/firestore/repositorio';
+import { listarMembros, listarMedicamentos } from '../../core/database/repositorio';
 
 interface Mensagem {
   id: string;
