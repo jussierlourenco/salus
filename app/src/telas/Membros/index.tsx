@@ -169,109 +169,109 @@ export function Membros() {
       {modalAberto && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 overflow-y-auto">
           <div className="min-h-full flex items-start sm:items-center justify-center p-4">
-          <div className="bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-lg w-full space-y-4 shadow-2xl animate-fade-in my-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-texto flex items-center gap-2">
-                <Users size={20} className="text-salus-500" />
-                Cadastrar Membro no Banco
-              </h3>
-              <button onClick={() => setModalAberto(false)} className="text-texto-secundario hover:text-texto">
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSalvar} className="space-y-3">
-              <Campo
-                label="Nome completo *"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="ex: Maria Silva, Rex"
-                required
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-texto-secundario mb-1">Tipo *</label>
-                  <select
-                    value={tipo}
-                    onChange={(e) => setTipo(e.target.value as TipoMembro)}
-                    className="w-full px-3 py-2.5 rounded-[var(--radius-md)] bg-fundo-elevado border border-borda text-texto text-sm focus:outline-none focus:border-salus-500"
-                  >
-                    <option value="pessoa">Pessoa</option>
-                    <option value="cao">Cão</option>
-                    <option value="gato">Gato</option>
-                    <option value="outro">Outro</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-texto-secundario mb-1">Vínculo</label>
-                  <select
-                    value={vinculo}
-                    onChange={(e) => setVinculo(e.target.value as Vinculo)}
-                    className="w-full px-3 py-2.5 rounded-[var(--radius-md)] bg-fundo-elevado border border-borda text-texto text-sm focus:outline-none focus:border-salus-500"
-                  >
-                    <option value="biologico">Biológico</option>
-                    <option value="adotivo">Adotivo</option>
-                    <option value="enteado">Enteado</option>
-                  </select>
-                </div>
+            <div className="bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-lg w-full space-y-4 shadow-2xl animate-fade-in my-auto">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-texto flex items-center gap-2">
+                  <Users size={20} className="text-salus-500" />
+                  Cadastrar Membro no Banco
+                </h3>
+                <button onClick={() => setModalAberto(false)} className="text-texto-secundario hover:text-texto">
+                  <X size={18} />
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleSalvar} className="space-y-3">
                 <Campo
-                  label="Data de Nascimento"
-                  type="date"
-                  value={nascimento}
-                  onChange={(e) => setNascimento(e.target.value)}
+                  label="Nome completo *"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="ex: Maria Silva, Rex"
+                  required
                 />
 
-                {tipo === 'pessoa' ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-texto-secundario mb-1">Tipo *</label>
+                    <select
+                      value={tipo}
+                      onChange={(e) => setTipo(e.target.value as TipoMembro)}
+                      className="w-full px-3 py-2.5 rounded-[var(--radius-md)] bg-fundo-elevado border border-borda text-texto text-sm focus:outline-none focus:border-salus-500"
+                    >
+                      <option value="pessoa">Pessoa</option>
+                      <option value="cao">Cão</option>
+                      <option value="gato">Gato</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-texto-secundario mb-1">Vínculo</label>
+                    <select
+                      value={vinculo}
+                      onChange={(e) => setVinculo(e.target.value as Vinculo)}
+                      className="w-full px-3 py-2.5 rounded-[var(--radius-md)] bg-fundo-elevado border border-borda text-texto text-sm focus:outline-none focus:border-salus-500"
+                    >
+                      <option value="biologico">Biológico</option>
+                      <option value="adotivo">Adotivo</option>
+                      <option value="enteado">Enteado</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
                   <Campo
-                    label="Tipo Sanguíneo"
-                    value={tipoSanguineo}
-                    onChange={(e) => setTipoSanguineo(e.target.value)}
-                    placeholder="ex: O+, A-"
+                    label="Data de Nascimento"
+                    type="date"
+                    value={nascimento}
+                    onChange={(e) => setNascimento(e.target.value)}
                   />
-                ) : (
-                  <Campo
-                    label="Raça (para pets)"
-                    value={raca}
-                    onChange={(e) => setRaca(e.target.value)}
-                    placeholder="ex: Golden Retriever"
-                  />
-                )}
-              </div>
 
-              <Campo
-                label="Condições / Doenças ativas (separadas por vírgula)"
-                value={condicoesText}
-                onChange={(e) => setCondicoesText(e.target.value)}
-                placeholder="ex: Hipertensão, Diabetes"
-              />
+                  {tipo === 'pessoa' ? (
+                    <Campo
+                      label="Tipo Sanguíneo"
+                      value={tipoSanguineo}
+                      onChange={(e) => setTipoSanguineo(e.target.value)}
+                      placeholder="ex: O+, A-"
+                    />
+                  ) : (
+                    <Campo
+                      label="Raça (para pets)"
+                      value={raca}
+                      onChange={(e) => setRaca(e.target.value)}
+                      placeholder="ex: Golden Retriever"
+                    />
+                  )}
+                </div>
 
-              <Campo
-                label="Alergias (separadas por vírgula)"
-                value={alergiasText}
-                onChange={(e) => setAlergiasText(e.target.value)}
-                placeholder="ex: Dipirona, Penicilina"
-              />
+                <Campo
+                  label="Condições / Doenças ativas (separadas por vírgula)"
+                  value={condicoesText}
+                  onChange={(e) => setCondicoesText(e.target.value)}
+                  placeholder="ex: Hipertensão, Diabetes"
+                />
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-borda">
-                <Botao variante="secundario" tamanho="sm" type="button" onClick={() => setModalAberto(false)}>
-                  Cancelar
-                </Botao>
-                <Botao
-                  tamanho="sm"
-                  type="submit"
-                  disabled={salvando || !nome.trim()}
-                  icone={salvando ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}
-                >
-                  {salvando ? 'Salvando no banco...' : 'Salvar no Firestore'}
-                </Botao>
-              </div>
-            </form>
-          </div>
+                <Campo
+                  label="Alergias (separadas por vírgula)"
+                  value={alergiasText}
+                  onChange={(e) => setAlergiasText(e.target.value)}
+                  placeholder="ex: Dipirona, Penicilina"
+                />
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-borda">
+                  <Botao variante="secundario" tamanho="sm" type="button" onClick={() => setModalAberto(false)}>
+                    Cancelar
+                  </Botao>
+                  <Botao
+                    tamanho="sm"
+                    type="submit"
+                    disabled={salvando || !nome.trim()}
+                    icone={salvando ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}
+                  >
+                    {salvando ? 'Salvando no banco...' : 'Salvar no Firestore'}
+                  </Botao>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
