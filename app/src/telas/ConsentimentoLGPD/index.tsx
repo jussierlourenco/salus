@@ -22,7 +22,7 @@ function SecaoLGPD({ icon: Icone, titulo, children }: { icon: React.ElementType;
 
 export function ConsentimentoLGPD() {
   const { usuario } = useAuth();
-  const { config } = useConfiguracao();
+  const { config, refreshConfig } = useConfiguracao();
   const navigate = useNavigate();
   const [aceito, setAceito] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -37,6 +37,7 @@ export function ConsentimentoLGPD() {
         versao_consentimento: VERSAO_CONSENTIMENTO,
         data_consentimento: new Date().toISOString(),
       });
+      await refreshConfig();
       navigate('/', { replace: true });
     } catch (err) {
       console.error('[LGPD] Erro ao salvar consentimento:', err);

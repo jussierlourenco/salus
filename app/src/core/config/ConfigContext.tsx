@@ -34,6 +34,7 @@ function paraCacheSemSegredos(config: ConfigUsuario): ConfigUsuario {
 interface ConfigContexto {
   config: ConfigUsuario;
   carregando: boolean;
+  refreshConfig: () => Promise<void>;
   salvarConfigIA: (configIA: ConfigProvedorIA | null) => Promise<void>;
   testarIA: (configIA: ConfigProvedorIA) => Promise<{ ok: boolean; mensagem: string }>;
   exportarDadosZip: () => Promise<void>;
@@ -81,6 +82,17 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       ativo = false;
     };
   }, [usuario]);
+
+  const refreshConfig = async () => {
+    if (!usuario) return;
+    const remoto = await obterConfigUsuario(usuario.uid);
+    setConfig(remoto);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(paraCacheSemSegredos(remoto)));
+    } catch (e) {
+      console.warn('[ConfigContext] Falha ao salvar no localStorage:', e);
+    }
+  };
 
   const salvarConfigIA = async (configIA: ConfigProvedorIA | null) => {
     const nova: ConfigUsuario = {
@@ -139,6 +151,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       value={{
         config,
         carregando,
+        refreshConfig,
         salvarConfigIA,
         testarIA,
         exportarDadosZip,
