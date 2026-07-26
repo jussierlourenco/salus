@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, Badge, Botao, Carregando, EstadoVazio, Campo } from '../../core/ui';
 import {
   User, Dog, Cat, FileText, Pill, Activity,
-  ChevronLeft, Plus, Heart, X, RefreshCw
+  ChevronLeft, Plus, Heart, X, RefreshCw, Link2
 } from 'lucide-react';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { buscarMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
@@ -32,8 +32,14 @@ export function Perfil() {
   const [carregando, setCarregando] = useState(true);
 
   // Modais de Adição
-  const [modalTipo, setModalTipo] = useState<'med' | 'exame' | 'vacina' | null>(null);
+  const [modalTipo, setModalTipo] = useState<'med' | 'exame' | 'vacina' | 'vincular-exame' | null>(null);
   const [salvando, setSalvando] = useState(false);
+
+  // Modal Vincular Exame Existente
+  const [examesSemVinculo, setExamesSemVinculo] = useState<Exame[]>([]);
+  const [carregandoExamesSemVinculo, setCarregandoExamesSemVinculo] = useState(false);
+  const [exameSelecionadoId, setExameSelecionadoId] = useState<string | null>(null);
+  const [vinculando, setVinculando] = useState(false);
 
   // Form Medicamento
   const [medNome, setMedNome] = useState('');
@@ -131,6 +137,36 @@ export function Perfil() {
       alert('Erro ao salvar exame: ' + (err as Error).message);
     } finally {
       setSalvando(false);
+    }
+  };
+
+  const abrirModalVincularExame = async () => {
+    if (!usuario) return;
+    setModalTipo('vincular-exame');
+    setExameSelecionadoId(null);
+    setCarregandoExamesSemVinculo(true);
+    try {
+      const todos = await listarExames(usuario.uid);
+      setExamesSemVinculo(todos.filter((e) => !e.membro_id));
+    } catch (err) {
+      alert('Erro ao carregar exames sem vínculo: ' + (err as Error).message);
+    } finally {
+      setCarregandoExamesSemVinculo(false);
+    }
+  };
+
+  const handleVincularExame = async () => {
+    if (!usuario || !id || !exameSelecionadoId) return;
+    setVinculando(true);
+    try {
+      await salvarExame(usuario.uid, { id: exameSelecionadoId, membro_id: id });
+      setModalTipo(null);
+      setExameSelecionadoId(null);
+      await carregarTudo();
+    } catch (err) {
+      alert('Erro ao vincular exame: ' + (err as Error).message);
+    } finally {
+      setVinculando(false);
     }
   };
 
@@ -301,9 +337,14 @@ export function Perfil() {
               <Activity size={18} className="text-salus-400" />
               Exames ({exames.length})
             </h2>
-            <Botao variante="secundario" tamanho="sm" icone={<Plus size={16} />} onClick={() => setModalTipo('exame')}>
-              Adicionar Exame
-            </Botao>
+            <div className="flex gap-2">
+              <Botao variante="secundario" tamanho="sm" icone={<Link2 size={16} />} onClick={abrirModalVincularExame}>
+                Vincular Exame Existente
+              </Botao>
+              <Botao variante="secundario" tamanho="sm" icone={<Plus size={16} />} onClick={() => setModalTipo('exame')}>
+                Adicionar Exame
+              </Botao>
+            </div>
           </div>
 
           {exames.length === 0 ? (
@@ -433,6 +474,66 @@ export function Perfil() {
                 </Botao>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Vincular Exame Existente */}
+      {modalTipo === 'vincular-exame' && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full max-h-[85dvh] overflow-y-auto space-y-4 shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-texto flex items-center gap-2">
+                <Link2 size={20} className="text-salus-400" />
+                Vincular Exame Existente
+              </h3>
+              <button onClick={() => setModalTipo(null)} className="text-texto-secundario hover:text-texto"><X size={18} /></button>
+            </div>
+
+            <p className="text-sm text-texto-secundario">
+              Exames enviados antes de cadastrar este membro, ainda sem vínculo. Selecione um para associar a {membro.nome}.
+            </p>
+
+            {carregandoExamesSemVinculo ? (
+              <p className="text-sm text-texto-secundario py-4 text-center">Carregando exames...</p>
+            ) : examesSemVinculo.length === 0 ? (
+              <p className="text-sm text-texto-secundario py-4 text-center">Nenhum exame sem vínculo encontrado.</p>
+            ) : (
+              <div className="space-y-2">
+                {examesSemVinculo.map((ex) => (
+                  <button
+                    key={ex.id}
+                    type="button"
+                    onClick={() => setExameSelecionadoId(ex.id)}
+                    className={`w-full text-left p-3 rounded-[var(--radius-md)] border transition-colors ${
+                      exameSelecionadoId === ex.id
+                        ? 'border-salus-500 bg-salus-600/10'
+                        : 'border-borda bg-fundo-elevado/40 hover:bg-fundo-elevado'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-texto">{ex.marcador}:</span>
+                      <span className="text-sm font-bold text-salus-400">{ex.valor} {ex.unidade}</span>
+                      <Badge variante={ex.flag === 'normal' ? 'salus' : 'alerta'}>{ex.flag}</Badge>
+                    </div>
+                    <p className="text-xs text-texto-secundario">Data do exame: {ex.data}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-borda">
+              <Botao variante="secundario" tamanho="sm" type="button" onClick={() => setModalTipo(null)}>Cancelar</Botao>
+              <Botao
+                tamanho="sm"
+                type="button"
+                disabled={vinculando || !exameSelecionadoId}
+                onClick={handleVincularExame}
+                icone={vinculando ? <RefreshCw size={16} className="animate-spin" /> : <Link2 size={16} />}
+              >
+                {vinculando ? 'Vinculando...' : 'Vincular'}
+              </Botao>
+            </div>
           </div>
         </div>
       )}
