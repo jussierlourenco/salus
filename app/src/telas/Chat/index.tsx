@@ -176,7 +176,7 @@ export function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-8rem)] lg:h-[calc(100dvh-6rem)] animate-fade-in">
+    <div className="flex flex-col h-full animate-fade-in">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div>

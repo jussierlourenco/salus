@@ -46,7 +46,7 @@ export function AppShell() {
   const { tema, alternarTema } = useTema();
 
   return (
-    <div className="flex h-dvh">
+    <div className="flex flex-col lg:flex-row h-dvh">
       {/* ── Sidebar Desktop ── */}
       <aside className="hidden lg:flex flex-col w-64 lg:w-72 border-r border-borda bg-fundo-card/50 p-4">
         {/* Logo */}
@@ -112,49 +112,50 @@ export function AppShell() {
         </div>
       </aside>
 
-      {/* ── Main Content ── */}
-      <main className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto pb-28 lg:pb-6">
-          <div className="max-w-5xl mx-auto px-4 py-6">
+      {/* ── Main Column (mobile: column, desktop: fills sidebar row) ── */}
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Content */}
+        <main className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 overflow-y-auto">
             <Outlet />
           </div>
-        </div>
+        </main>
 
-        {/* ── Disclaimer ── */}
+        {/* ── Disclaimer Desktop ── */}
         <footer className="hidden lg:block border-t border-borda px-4 py-2.5 text-center">
           <p className="text-[11px] text-texto-secundario/60">
             O Salus organiza informações de saúde. Ele não diagnostica, não prescreve e não substitui médico ou veterinário.
           </p>
         </footer>
-      </main>
 
-      {/* ── Bottom Nav Mobile ── */}
-      <nav className="fixed bottom-0 left-0 right-0 lg:hidden z-50 pb-[env(safe-area-inset-bottom,0px)]">
-        <div className="glass border-t border-borda flex items-center justify-around px-1 py-1">
-          {links.map(({ to, label, icone: Icone }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                `flex flex-col items-center gap-1 py-2 px-3 rounded-[var(--radius-sm)]
-                 transition-all duration-200 touch-target relative min-w-[56px]
-                 ${isActive ? 'text-salus-400' : 'text-texto-secundario active:text-salus-400'}`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icone size={20} />
-                  <span className="text-[10px] font-medium leading-none">{label}</span>
-                  {isActive && (
-                    <span className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-salus-400 rounded-full" />
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </div>
-      </nav>
+        {/* ── Bottom Nav (in document flow — no overlap) ── */}
+        <nav className="lg:hidden bg-fundo">
+          <div className="glass border-t border-borda flex items-center justify-around px-1 py-1 pb-[env(safe-area-inset-bottom,0px)]">
+            {links.map(({ to, label, icone: Icone }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === '/'}
+                className={({ isActive }) =>
+                  `flex flex-col items-center gap-1 py-2 px-3 rounded-[var(--radius-sm)]
+                   transition-all duration-200 touch-target relative min-w-[56px]
+                   ${isActive ? 'text-salus-400' : 'text-texto-secundario active:text-salus-400'}`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icone size={20} />
+                    <span className="text-[10px] font-medium leading-none">{label}</span>
+                    {isActive && (
+                      <span className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-salus-400 rounded-full" />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+        </nav>
+      </div>
     </div>
   );
 }
