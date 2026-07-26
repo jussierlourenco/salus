@@ -167,8 +167,9 @@ export function Membros() {
 
       {/* Modal Adicionar Membro */}
       {modalAberto && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-lg w-full space-y-4 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 overflow-y-auto">
+          <div className="min-h-full flex items-start sm:items-center justify-center p-4">
+          <div className="bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-lg w-full space-y-4 shadow-2xl animate-fade-in my-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-texto flex items-center gap-2">
                 <Users size={20} className="text-salus-500" />
@@ -270,6 +271,7 @@ export function Membros() {
                 </Botao>
               </div>
             </form>
+          </div>
           </div>
         </div>
       )}
