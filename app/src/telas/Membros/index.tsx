@@ -4,7 +4,7 @@ import { Card, Badge, Botao, EstadoVazio, Carregando, Campo } from '../../core/u
 import { Users, Plus, Dog, Cat, User, ChevronRight, RefreshCw, X, Pencil, Trash2, AlertTriangle, CheckCircle2, UserPlus } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { listarMembros, salvarMembro, excluirMembro, compartilharMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
+import { listarMembros, listarMembrosCompartilhados, salvarMembro, excluirMembro, compartilharMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
 import type { Membro, TipoMembro, Vinculo } from '../../modulos/membros/entidades/membro';
 
 const iconesTipo = {
@@ -22,8 +22,9 @@ const coresTipo = {
 };
 
 export function Membros() {
-  const { familiaId } = useAuth();
+  const { usuario, familiaId } = useAuth();
   const [membros, setMembros] = useState<Membro[]>([]);
+  const [membrosCompartilhados, setMembrosCompartilhados] = useState<(Membro & { familia_origem_id: string })[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   // Modal de adição/edição
@@ -52,11 +53,15 @@ export function Membros() {
   const [alergiasText, setAlergiasText] = useState('');
 
   const carregar = async () => {
-    if (!familiaId) return;
+    if (!usuario || !familiaId) return;
     setCarregando(true);
     try {
-      const lista = await listarMembros(familiaId);
+      const [lista, compartilhados] = await Promise.all([
+        listarMembros(familiaId),
+        listarMembrosCompartilhados(usuario.uid),
+      ]);
       setMembros(lista);
+      setMembrosCompartilhados(compartilhados);
     } catch (err) {
       console.error('[Membros] Erro ao carregar do Firestore:', err);
     } finally {
@@ -177,17 +182,24 @@ export function Membros() {
           {membros.map((membro) => {
             const Icone = iconesTipo[membro.tipo] ?? User;
             const cor = coresTipo[membro.tipo] ?? coresTipo.outro;
+            const isCompartilhado = (membro.compartilhado_com_uids?.length ?? 0) > 0;
             return (
-              <Card key={membro.id} hover className="group h-full relative">
+              <Card key={membro.id} hover className={`group h-full relative ${isCompartilhado ? 'border-dashed border-salus-500/40' : ''}`}>
                 <NavLink to={`/membro/${membro.id}`} className="block">
                   <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-[var(--radius-lg)] bg-gradient-to-br ${cor} flex items-center justify-center shadow-lg shrink-0`}>
+                    <div className={`w-12 h-12 rounded-[var(--radius-lg)] bg-gradient-to-br ${cor} flex items-center justify-center shadow-lg shrink-0 ${isCompartilhado ? 'ring-2 ring-salus-500/30 ring-offset-2 ring-offset-fundo-card' : ''}`}>
                       <Icone size={24} className="text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-texto truncate">{membro.nome}</h3>
-                        <ChevronRight size={16} className="text-texto-secundario/50 group-hover:text-salus-400 transition-colors shrink-0" />
+                        {isCompartilhado && (
+                          <span className="text-[10px] font-medium text-salus-400 flex items-center gap-0.5 shrink-0">
+                            <UserPlus size={10} />
+                            Compartilhado
+                          </span>
+                        )}
+                        <ChevronRight size={16} className="text-texto-secundario/50 group-hover:text-salus-400 transition-colors shrink-0 ml-auto" />
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variante="neutro">
@@ -245,6 +257,45 @@ export function Membros() {
             );
           })}
         </div>
+      )}
+
+      {/* Membros Compartilhados */}
+      {membrosCompartilhados.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <UserPlus size={18} className="text-salus-400" />
+            <h2 className="text-sm font-semibold text-texto">Compartilhados com você ({membrosCompartilhados.length})</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {membrosCompartilhados.map((membro) => {
+              const Icone = iconesTipo[membro.tipo] ?? User;
+              const cor = coresTipo[membro.tipo] ?? coresTipo.outro;
+              return (
+                <Card key={`shared-${membro.familia_origem_id}-${membro.id}`} hover className="group h-full relative border-dashed border-salus-500/40">
+                  <NavLink to={`/membro/${membro.id}?familia=${membro.familia_origem_id}`} className="block">
+                    <div className="flex items-start gap-4">
+                      <div className={"w-12 h-12 rounded-[var(--radius-lg)] bg-gradient-to-br " + cor + " flex items-center justify-center shadow-lg shrink-0 ring-2 ring-salus-500/30 ring-offset-2 ring-offset-fundo-card"}>
+                        <Icone size={24} className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-texto truncate">{membro.nome}</h3>
+                          <span className="text-[10px] font-medium text-salus-400 shrink-0">Compartilhado</span>
+                          <ChevronRight size={16} className="text-texto-secundario/50 group-hover:text-salus-400 transition-colors shrink-0 ml-auto" />
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variante="neutro">
+                            {membro.tipo === 'pessoa' ? 'Pessoa' : membro.tipo === 'cao' ? 'Cão' : membro.tipo === 'gato' ? 'Gato' : 'Outro'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </NavLink>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {/* Modal — Cadastrar/Editar Membro (portal para evitar overflow do layout pai) */}
