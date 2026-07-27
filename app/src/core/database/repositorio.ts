@@ -34,7 +34,7 @@ export {
   atualizarStatusCaixaEntrada,
 } from '../../modulos/caixa-entrada/casos-de-uso/repositorioCaixaEntrada';
 
-import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 
 export interface Evento {
@@ -54,10 +54,13 @@ function colecaoEventos(familiaId: string) {
 }
 
 export async function listarEventos(familiaId: string, membroId?: string): Promise<Evento[]> {
+  if (membroId) {
+    const q = query(colecaoEventos(familiaId), where('membro_id', '==', membroId));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento);
+  }
   const snap = await getDocs(colecaoEventos(familiaId));
-  const todos = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento);
-  if (membroId) return todos.filter((e) => e.membro_id === membroId);
-  return todos;
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento);
 }
 
 export async function salvarEvento(familiaId: string, evento: Partial<Evento> & { id?: string }): Promise<string> {

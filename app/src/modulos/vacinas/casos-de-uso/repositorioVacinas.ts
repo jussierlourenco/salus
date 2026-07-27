@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '../../../core/database/firebase';
 import type { Vacina } from '../entidades/vacina';
 
@@ -11,10 +11,13 @@ function docVacina(familiaId: string, id: string) {
 }
 
 export async function listarVacinas(familiaId: string, membroId?: string): Promise<Vacina[]> {
+  if (membroId) {
+    const q = query(colecaoVacinas(familiaId), where('membro_id', '==', membroId));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Vacina);
+  }
   const snap = await getDocs(colecaoVacinas(familiaId));
-  const todos = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Vacina);
-  if (membroId) return todos.filter((v) => v.membro_id === membroId);
-  return todos;
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Vacina);
 }
 
 export async function salvarVacina(familiaId: string, vacina: Partial<Vacina> & { id?: string }): Promise<string> {

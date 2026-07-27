@@ -19,6 +19,7 @@ export interface Membro {
   relacoes: Relacao[];
   raca?: string;
   peso_kg?: number;
+  compartilhado_com_uids?: string[];
   criado_em: string;
   atualizado_em: string;
 }

@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, getDoc, setDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, query, orderBy, arrayUnion, arrayRemove, collectionGroup, where } from 'firebase/firestore';
 import { db } from '../../../core/database/firebase';
 import type { Membro } from '../entidades/membro';
 
@@ -37,4 +37,26 @@ export async function salvarMembro(familiaId: string, membro: Partial<Membro> & 
 
 export async function excluirMembro(familiaId: string, membroId: string): Promise<void> {
   await deleteDoc(docMembro(familiaId, membroId));
+}
+
+export async function compartilharMembro(familiaId: string, membroId: string, uidAlvo: string): Promise<void> {
+  await updateDoc(docMembro(familiaId, membroId), {
+    compartilhado_com_uids: arrayUnion(uidAlvo),
+  });
+}
+
+export async function removerCompartilhamento(familiaId: string, membroId: string, uidAlvo: string): Promise<void> {
+  await updateDoc(docMembro(familiaId, membroId), {
+    compartilhado_com_uids: arrayRemove(uidAlvo),
+  });
+}
+
+export async function listarMembrosCompartilhados(uid: string): Promise<(Membro & { familia_origem_id: string })[]> {
+  const q = query(collectionGroup(db, 'membros'), where('compartilhado_com_uids', 'array-contains', uid));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({
+    ...(d.data() as Membro),
+    id: d.id,
+    familia_origem_id: d.ref.path.split('/')[1],
+  }));
 }

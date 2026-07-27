@@ -2,13 +2,30 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Dado compartilhado do Salus App vive sob /familias/{familiaId}/... — qualquer
-    // uid listado em membros_uids pode ler/escrever toda a árvore da família.
-    // Ver docs/app-aistudio/00_ARQUITETURA.md §4.
+
+    // ===== FUNÇÕES AUXILIARES =====
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function familiaDoc(familiaId) {
+      return /databases/$(database)/documents/familias/$(familiaId);
+    }
+    function membroDoc(familiaId, membroId) {
+      return /databases/$(database)/documents/familias/$(familiaId)/membros/$(membroId);
+    }
+    function isFamiliaMember(familiaId) {
+      return isSignedIn() &&
+        request.auth.uid in get(familiaDoc(familiaId)).data.membros_uids;
+    }
+    function isMembroShared(familiaId, membroId) {
+      return request.auth.uid in get(membroDoc(familiaId, membroId)).data.compartilhado_com_uids;
+    }
+
+    // ===== DOC DA FAMÍLIA (inalterado) =====
     match /familias/{familiaId} {
-      allow read: if request.auth != null && request.auth.uid in resource.data.membros_uids;
-      allow create: if request.auth != null && request.resource.data.membros_uids == [request.auth.uid];
-      allow update: if request.auth != null && (
+      allow read: if isSignedIn() && request.auth.uid in resource.data.membros_uids;
+      allow create: if isSignedIn() && request.resource.data.membros_uids == [request.auth.uid];
+      allow update: if isSignedIn() && (
         request.auth.uid in resource.data.membros_uids ||
         (
           !(request.auth.uid in resource.data.membros_uids) &&
@@ -19,33 +36,131 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /familias/{familiaId}/{documento=**} {
-      allow read, write: if request.auth != null &&
-        request.auth.uid in get(/databases/$(database)/documents/familias/$(familiaId)).data.membros_uids;
+    // ===== SUBCOLEÇÕES — regras por coleção (sem wildcard) =====
+
+    // MEMBROS — leitura para família OU usuários no compartilhado_com_uids
+    match /familias/{familiaId}/membros/{membroId} {
+      allow read: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (resource.data.keys().hasAll(['compartilhado_com_uids']) &&
+         request.auth.uid in resource.data.compartilhado_com_uids)
+      );
+      allow create: if isFamiliaMember(familiaId);
+      allow update: if isFamiliaMember(familiaId);
+      allow delete: if isFamiliaMember(familiaId);
     }
 
-    // Dados legados de /usuarios/{uid}/... (backup silencioso da migração para
-    // familias/{familiaId}/...) — dono do uid continua podendo ler/escrever.
+    // MEDICAMENTOS — acesso via família OU compartilhamento do membro associado
+    match /familias/{familiaId}/medicamentos/{id} {
+      allow read: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, resource.data.membro_id))
+      );
+      allow create, update: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (request.resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, request.resource.data.membro_id))
+      );
+      allow delete: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, resource.data.membro_id))
+      );
+    }
+
+    // EXAMES
+    match /familias/{familiaId}/exames/{id} {
+      allow read: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, resource.data.membro_id))
+      );
+      allow create, update: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (request.resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, request.resource.data.membro_id))
+      );
+      allow delete: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, resource.data.membro_id))
+      );
+    }
+
+    // VACINAS
+    match /familias/{familiaId}/vacinas/{id} {
+      allow read: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, resource.data.membro_id))
+      );
+      allow create, update: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (request.resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, request.resource.data.membro_id))
+      );
+      allow delete: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, resource.data.membro_id))
+      );
+    }
+
+    // EVENTOS
+    match /familias/{familiaId}/eventos/{id} {
+      allow read: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, resource.data.membro_id))
+      );
+      allow create, update: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (request.resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, request.resource.data.membro_id))
+      );
+      allow delete: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, resource.data.membro_id))
+      );
+    }
+
+    // CAIXA DE ENTRADA — apenas membros da família (sem membro_id para granularidade)
+    match /familias/{familiaId}/caixa_entrada/{id} {
+      allow read, write: if isFamiliaMember(familiaId);
+    }
+
+    // CONFIG — apenas membros da família
+    match /familias/{familiaId}/config/{id} {
+      allow read, write: if isFamiliaMember(familiaId);
+    }
+
+    // ===== COLLECTION GROUP — descoberta de membros compartilhados =====
+    match /{path=**}/membros/{membroId} {
+      allow read: if isSignedIn() &&
+        resource.data.keys().hasAll(['compartilhado_com_uids']) &&
+        request.auth.uid in resource.data.compartilhado_com_uids;
+    }
+
+    // ===== DADOS LEGADOS (backup, inalterado) =====
     match /usuarios/{uid}/{documento=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // Coleção de administração de usuários
-    // - Qualquer auth pode criar seu próprio documento (self-register)
-    // - Qualquer auth pode ler seu próprio documento (verificar status)
-    // - Apenas o super-admin (jussier.silva@gmail.com) pode listar/todos e atualizar status
+    // ===== ADMIN (inalterado) =====
     match /admin_usuarios/{uid} {
-      allow create: if request.auth != null && request.auth.uid == uid;
-      allow read: if request.auth != null && (
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow read: if isSignedIn() && (
         request.auth.uid == uid ||
         request.auth.token.email == 'jussier.silva@gmail.com'
       );
-      allow write: if request.auth != null && (
+      allow write: if isSignedIn() && (
         request.auth.token.email == 'jussier.silva@gmail.com'
       );
     }
 
-    // Nenhuma coleção fora dos padrões acima é permitida.
+    // ===== NEGAÇÃO GERAL =====
     match /{document=**} {
       allow read, write: if false;
     }

@@ -1,4 +1,4 @@
-import { useParams, NavLink } from 'react-router-dom';
+import { useParams, useSearchParams, NavLink } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Card, Badge, Botao, Carregando, EstadoVazio, Campo } from '../../core/ui';
 import {
@@ -22,7 +22,9 @@ const iconeMembro = { pessoa: User, cao: Dog, gato: Cat, outro: User };
 
 export function Perfil() {
   const { id } = useParams<{ id: string }>();
-  const { familiaId } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { familiaId: familiaIdContexto } = useAuth();
+  const familiaId = searchParams.get('familia') ?? familiaIdContexto;
 
   const [abaAtiva, setAbaAtiva] = useState<Aba>('Ficha');
   const [membro, setMembro] = useState<Membro | null>(null);

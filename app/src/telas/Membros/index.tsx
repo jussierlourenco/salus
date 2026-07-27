@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Card, Badge, Botao, EstadoVazio, Carregando, Campo } from '../../core/ui';
-import { Users, Plus, Dog, Cat, User, ChevronRight, RefreshCw, X, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Users, Plus, Dog, Cat, User, ChevronRight, RefreshCw, X, Pencil, Trash2, AlertTriangle, CheckCircle2, UserPlus } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { listarMembros, salvarMembro, excluirMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
+import { listarMembros, salvarMembro, excluirMembro, compartilharMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
 import type { Membro, TipoMembro, Vinculo } from '../../modulos/membros/entidades/membro';
 
 const iconesTipo = {
@@ -34,6 +34,12 @@ export function Membros() {
   // Modal de exclusão
   const [membroExcluir, setMembroExcluir] = useState<Membro | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+
+  // Modal de compartilhamento
+  const [membroCompartilhar, setMembroCompartilhar] = useState<Membro | null>(null);
+  const [compartilharUid, setCompartilharUid] = useState('');
+  const [compartilhando, setCompartilhando] = useState(false);
+  const [feedbackCompartilhar, setFeedbackCompartilhar] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
   // Campos do formulário
   const [nome, setNome] = useState('');
@@ -215,6 +221,18 @@ export function Membros() {
                   <button
                     onClick={(e) => {
                       e.preventDefault();
+                      setMembroCompartilhar(membro);
+                      setCompartilharUid('');
+                      setFeedbackCompartilhar(null);
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-medium text-texto-secundario hover:text-salus-400 px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-fundo-elevado transition-colors"
+                  >
+                    <UserPlus size={14} />
+                    Compartilhar
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
                       setMembroExcluir(membro);
                     }}
                     className="flex items-center gap-1.5 text-xs font-medium text-texto-secundario hover:text-vencido-500 px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-fundo-elevado transition-colors"
@@ -335,6 +353,83 @@ export function Membros() {
                 </Botao>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal — Compartilhar Membro */}
+      {membroCompartilhar && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => { setMembroCompartilhar(null); setFeedbackCompartilhar(null); }} />
+          <div className="relative bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-texto flex items-center gap-2">
+                <UserPlus size={20} className="text-salus-500" />
+                Compartilhar {membroCompartilhar.nome}
+              </h3>
+              <button onClick={() => { setMembroCompartilhar(null); setFeedbackCompartilhar(null); }} className="text-texto-secundario hover:text-texto p-2 -mr-2">
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-texto-secundario mb-4">
+              Compartilhe este membro com outro cuidador. Cole abaixo o UID da pessoa que vai receber acesso de leitura e edição aos dados de {membroCompartilhar.nome}.
+            </p>
+
+            <div className="space-y-3">
+              <Campo
+                label="UID do cuidador"
+                value={compartilharUid}
+                onChange={(e) => setCompartilharUid(e.target.value)}
+                placeholder="Cole o UID da pessoa aqui"
+              />
+
+              {feedbackCompartilhar && (
+                <div
+                  className={`p-3 rounded-[var(--radius-md)] text-sm flex items-start gap-2.5 border ${
+                    feedbackCompartilhar.tipo === 'sucesso'
+                      ? 'bg-salus-950/40 border-salus-500/40 text-salus-300'
+                      : 'bg-alerta-950/40 border-alerta-500/40 text-alerta-300'
+                  }`}
+                >
+                  {feedbackCompartilhar.tipo === 'sucesso' ? (
+                    <CheckCircle2 size={18} className="text-salus-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle size={18} className="text-alerta-400 shrink-0 mt-0.5" />
+                  )}
+                  <span>{feedbackCompartilhar.texto}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-borda">
+                <Botao variante="secundario" tamanho="sm" type="button" onClick={() => { setMembroCompartilhar(null); setFeedbackCompartilhar(null); }}>
+                  Cancelar
+                </Botao>
+                <Botao
+                  tamanho="sm"
+                  type="button"
+                  disabled={compartilhando || !compartilharUid.trim()}
+                  onClick={async () => {
+                    if (!familiaId || !membroCompartilhar) return;
+                    setCompartilhando(true);
+                    setFeedbackCompartilhar(null);
+                    try {
+                      await compartilharMembro(familiaId, membroCompartilhar.id, compartilharUid.trim());
+                      setFeedbackCompartilhar({ tipo: 'sucesso', texto: `${membroCompartilhar.nome} compartilhado com sucesso!` });
+                      setTimeout(() => { setMembroCompartilhar(null); setFeedbackCompartilhar(null); }, 2000);
+                    } catch (err) {
+                      setFeedbackCompartilhar({ tipo: 'erro', texto: 'Erro ao compartilhar: ' + (err as Error).message });
+                    } finally {
+                      setCompartilhando(false);
+                    }
+                  }}
+                  icone={compartilhando ? <RefreshCw size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                >
+                  {compartilhando ? 'Compartilhando...' : 'Compartilhar acesso'}
+                </Botao>
+              </div>
+            </div>
           </div>
         </div>,
         document.body
