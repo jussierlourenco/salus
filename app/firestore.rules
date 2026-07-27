@@ -148,16 +148,21 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // ===== ADMIN (inalterado) =====
+    // ===== ADMIN =====
     match /admin_usuarios/{uid} {
       allow create: if isSignedIn() && request.auth.uid == uid;
       allow read: if isSignedIn() && (
         request.auth.uid == uid ||
         request.auth.token.email == 'jussier.silva@gmail.com'
       );
-      allow write: if isSignedIn() && (
+      allow update: if isSignedIn() && (
+        // Usuário pode alterar apenas familia_id no próprio documento
+        (request.auth.uid == uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['familia_id'])) ||
+        // Admin pode alterar qualquer campo
         request.auth.token.email == 'jussier.silva@gmail.com'
       );
+      allow delete: if false;
     }
 
     // ===== NEGAÇÃO GERAL =====

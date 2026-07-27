@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, AuthProvider } from './core/auth/AuthProvider';
 import { ConfigProvider, useConfiguracao } from './core/config/ConfigContext';
 import { AppShell } from './core/ui/AppShell';
-import { Carregando } from './core/ui';
+import { Botao, Carregando } from './core/ui';
+import { AlertTriangle, LogOut } from 'lucide-react';
 import { Login } from './telas/Login';
 import { Onboarding } from './telas/Onboarding';
 import { Painel } from './telas/Painel';
@@ -25,10 +26,26 @@ function GuardaAuth({ children }: { children: React.ReactNode }) {
 }
 
 function GuardaAprovacao({ children }: { children: React.ReactNode }) {
-  const { usuario, usuarioSalus, carregando, carregandoUsuarioSalus } = useAuth();
+  const { usuario, usuarioSalus, carregando, carregandoUsuarioSalus, sair } = useAuth();
   if (carregando || carregandoUsuarioSalus) return <Carregando texto="Verificando acesso..." tamanho="lg" />;
   if (!usuario) return <Navigate to="/login" replace />;
-  if (!usuarioSalus) return <Carregando texto="Preparando cadastro..." tamanho="lg" />;
+  if (!usuarioSalus) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center p-4">
+        <div className="text-center max-w-md space-y-4">
+          <AlertTriangle size={40} className="text-alerta-400 mx-auto" />
+          <h2 className="text-xl font-bold text-texto">Erro ao carregar cadastro</h2>
+          <p className="text-sm text-texto-secundario">
+            Não foi possível carregar seus dados. Isso pode acontecer se o seu cadastro não foi completamente criado.
+            Tente novamente ou contate o administrador.
+          </p>
+          <Botao onClick={() => { sair(); }} variante="secundario" icone={<LogOut size={16} />}>
+            Sair e tentar novamente
+          </Botao>
+        </div>
+      </div>
+    );
+  }
   if (usuarioSalus.status === 'pending' || usuarioSalus.status === 'denied') {
     return <Navigate to="/aguardando" replace />;
   }
