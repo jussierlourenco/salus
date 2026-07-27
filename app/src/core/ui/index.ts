@@ -8,3 +8,6 @@ export { PainelDeProposta } from './PainelDeProposta';
 export { useTema } from './useTema';
 export type { Tema } from './useTema';
 export { VisualizadorDocumento } from './VisualizadorDocumento';
+export { StripCalendar } from './StripCalendar';
+export { Timeline, TimelineEvent } from './Timeline';
+export { BottomSheet } from './BottomSheet';

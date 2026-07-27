@@ -17,8 +17,9 @@ import type { Membro } from '../../modulos/membros/entidades/membro';
 import type { Medicamento, StatusMedicamento } from '../../modulos/medicamentos/entidades/medicamento';
 import type { Exame, FlagExame } from '../../modulos/exames/entidades/exame';
 import type { Vacina } from '../../modulos/vacinas/entidades/vacina';
+import { AbaDiario } from './AbaDiario';
 
-const abas = ['Ficha', 'Medicamentos', 'Exames', 'Vacinas'] as const;
+const abas = ['Ficha', 'Medicamentos', 'Exames', 'Vacinas', 'Diário'] as const;
 type Aba = typeof abas[number];
 
 const iconeMembro = { pessoa: User, cao: Dog, gato: Cat, outro: User };
@@ -561,6 +562,9 @@ export function Perfil() {
           )}
         </Card>
       )}
+
+      {/* Tab Content: Diário */}
+      {abaAtiva === 'Diário' && <AbaDiario membroId={id!} />}
 
       {/* Modal Adicionar/Editar Medicamento */}
       {modalTipo === 'med' && createPortal(
