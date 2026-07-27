@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X, FileText, Download, Eye, FileWarning, Edit3, Check, RotateCcw, Loader2 } from 'lucide-react';
 import { Botao } from './Botao';
 import { useAuth } from '../auth/AuthProvider';
@@ -102,13 +103,13 @@ export function VisualizadorDocumento({
   const isImagem = mimeType.startsWith('image/');
   const isPdf = mimeType === 'application/pdf';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Overlay */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onFechar} />
+      <div className="absolute inset-0 bg-black/50" onClick={onFechar} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-3xl max-h-[90dvh] flex flex-col rounded-[var(--radius-xl)] bg-fundo-card border border-borda shadow-2xl animate-slide-up">
+      <div className="relative w-full max-w-3xl max-h-[90dvh] flex flex-col rounded-[var(--radius-lg)] bg-fundo-card border border-borda shadow-2xl animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-borda shrink-0">
           <div className="flex items-center gap-2 min-w-0">
@@ -259,6 +260,7 @@ export function VisualizadorDocumento({
           </Botao>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
