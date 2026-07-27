@@ -1,4 +1,5 @@
 # LAUDO DE AUDITORIA ARQUITETURAL
+
 ## Salus App — Conformidade contra Cânone 9 Eixos
 
 **Data**: 2026-07-26  
@@ -12,7 +13,7 @@
 
 ### Estrutura e Módulos de Topo
 
-```
+```text
 app/src/
 ├── core/              [Núcleo compartilhado — I/O, frameworks]
 │   ├── auth/              AuthProvider (Firebase Auth)
@@ -50,7 +51,7 @@ app/src/
 
 ### Dependências Reais (não pretendidas)
 
-```
+```text
 telas/* 
   ├─> core/auth, core/config, core/database/repositorio*
   ├─> modulos/*/casos-de-uso/repositorio*
@@ -95,7 +96,7 @@ dominio/
 ## 2. PLACAR POR EIXO
 
 | Eixo | Veredicto | Nota 0–3 | Evidência principal |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **E1** Ocultação de informação | 🟡 Parcial | 2 | Schema Firestore conhecido por ~10 arquivos; decomposição temporal vs. por decisão misturada |
 | **E2** Tipos abstratos | ✅ Passa | 3 | Entidades bem-formadas; Propostas tipadas com Zod; interfaces públicas claras |
 | **E3** Profundidade de interface | 🟡 Parcial | 2 | Telas >800 linhas (rasas); Painel com 23 imports; PainelDeProposta existe mas não wired |
@@ -113,7 +114,7 @@ dominio/
 ### E1–E2 · Ocultação e Tipos Abstratos
 
 | ID | Resultado | Métrica apurada | Evidência | Eixo |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | MOD-01 | 🔴 Falha | Decisão volátil (schema Firestore) conhecida por ~10 arquivos | `/familias/{familiaId}` referenciado em: `repositorioFamilias.ts`, `repositorio.ts`, `repositorioMembros.ts`, `repositorioExames.ts`, `repositorioMedicamentos.ts`, `repositorioVacinas.ts`, `repositorioCaixaEntrada.ts`, tipos, telas (8+ arquivos) | E1 |
 | MOD-02 | 🟡 Parcial | Decomposição temporal detectada | `modulos/caixa-entrada/` tem `salvarCaixaEntrada`, `atualizarStatusCaixaEntrada` sem pipeline explícito; fluxo real = upload→extração→proposta→aplicação (não wired) | E1 |
 | MOD-03 | ✅ Passa | Sem ORM direto; acesso via campos públicos | Telas acessam `membro.compartilhado_com_uids?.length` (público), mas CRUD apenas via repositórios; `app/firestore.rules:43-50` valida borda | E1 |
@@ -128,7 +129,7 @@ dominio/
 ### E4 · Complexidade Acidental
 
 | ID | Resultado | Métrica apurada | Evidência | Eixo |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | EST-01 | 🟡 Parcial | 19 states em Ajustes | `app/src/telas/Ajustes/index.tsx:84–119` (19 useState) + `useEffect` × 3 | E4 |
 | EST-02 | ✅ Passa | `dominio/alertas.ts` 100% puro | Sem I/O, sem relógio injetado, determinístico | E4 |
 | EST-03 | ✅ Passa | Sem derivados persistidos | Alertas calculados em memória; nenhum campo computado salvo | E4 |
@@ -138,7 +139,7 @@ dominio/
 ### E5 · Testabilidade
 
 | ID | Resultado | Métrica apurada | Evidência | Eixo |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | TST-01 | 🟡 Parcial | `dominio/` sim, app não | 11 testes (alertas.test.ts, markdown.test.ts, validacao.test.ts); zero repositórios/telas testados | E5 |
 | TST-02 | 🟡 Parcial | Domínio <100ms; app não mensurável | Testes de domínio rápidos | E5 |
 | TST-03 | ✅ Passa | Determinístico sem `--randomize` | Testes usam datas fixas | E5 |
@@ -149,7 +150,7 @@ dominio/
 ### E6 · Fronteiras e Dependência
 
 | ID | Resultado | Métrica apurada | Evidência | Eixo |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | ARQ-01 | 🟡 Parcial | Domínio OK, IA violação | `dominio/` não importa React; mas `core/ia/gemini.ts` faz `fetch()` direto do cliente (prevê backend em ARQUITETURA.md §3.1) | E6 |
 | ARQ-02 | ✅ Passa | Trocar Gemini → Zero domínio | Apenas `core/ia/gemini.ts` + PRESETS afetados | E6 |
 | ARQ-03 | ❌ Falha | Sem linter arquitetural | Nenhum `import-linter`, `dependency-cruiser` em CI/build | E6 |
@@ -159,7 +160,7 @@ dominio/
 ### E7 · Erros
 
 | ID | Resultado | Métrica apurada | Evidência | Eixo |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | ERR-01 | 🟡 Parcial | ~9–16 try/catch per 1k linhas | Alguns catches apenas logam sem relançar | E7 |
 | ERR-02 | 🟡 Parcial | Maioria erros reais | "Arquivo não encontrado" poderia ser `null` | E7 |
 | ERR-03 | ✅ Passa | Firestore rollback automático | `setDoc()` é transacional por padrão | E7 |
@@ -168,7 +169,7 @@ dominio/
 ### E8 · Segurança
 
 | ID | Resultado | Métrica apurada | Evidência | Eixo |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | SEC-01 | ✅ Passa | Escopos mínimos | Firestore por `request.auth.uid`; Drive `drive.file` | E8 |
 | SEC-02 | 🟡 Parcial | Validação na borda | Firestore rules OK; Zod em IA; sem Zod no input UI | E8 |
 | SEC-03 | ✅ Passa | Zero segredos versionados | `.env.example` limpo; chave IA não persiste | E8 |
@@ -180,7 +181,7 @@ dominio/
 ### E9 · Teoria do Programa
 
 | ID | Resultado | Métrica apurada | Evidência | Eixo |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | CON-01 | ❌ Falha | Doc desatualizado | `docs/app-aistudio/00_ARQUITETURA.md`: §4 descreve `/usuarios/{uid}`, código usa `/familias/{familiaId}` com migração legada; §7.1 "Status de implementação" está incompleto | E9 |
 | CON-02 | 🟡 Parcial | 3 de 5 decisões documentadas | Schema mudança em comentário `repositorioFamilias.ts`, não em doc main; PainelDeProposta documentado mas **não implementado** | E9 |
 | CON-03 | ❌ Falha | Zero comentários de interface | `criarProvedor()`, repositórios, `calcularAlertas()` sem /**/ | E9 |
@@ -192,18 +193,21 @@ dominio/
 ## 4. ACHADOS CRÍTICOS
 
 ### CRÍTICO #1 | Documentação de Arquitetura Obsoleta
+
 **Sintoma**: `docs/app-aistudio/00_ARQUITETURA.md` descreve schema `/usuarios/{uid}/...` (seção 4), mas código real implementa `/familias/{familiaId}/...` com migração legada automática.
 
 **Causa estrutural**: Mudança de escopo (multi-tenant → familiar) não propagada para documentação central.
 
 **Princípio violado**: E9 (Teoria do programa) — documento não sustenta teoria mental do sistema.
 
-**Consequência prevista (6 meses)**: 
-- Novo desenvolvedor lê doc, cria features em `/usuarios/{uid}` 
+**Consequência prevista (6 meses)**:
+
+- Novo desenvolvedor lê doc, cria features em `/usuarios/{uid}`
 - Regras Firestore bloqueiam acesso
 - Surpresa e refactoring urgente
 
 **Evidência**:
+
 - `docs/app-aistudio/00_ARQUITETURA.md:136–147` diz `/usuarios/{uid}/perfil/config`
 - `app/src/core/database/repositorioFamilias.ts:59–88` implementa `migrarDadosLegados()` de `/usuarios/{uid}` → `/familias/{familiaId}`
 - `app/firestore.rules:24–127` todas regras sob `/familias/{familiaId}`
@@ -211,18 +215,21 @@ dominio/
 ---
 
 ### CRÍTICO #2 | PainelDeProposta Documentado mas Não Wired
+
 **Sintoma**: Componente `<PainelDeProposta>` existe em `core/ui/` (conforme ARQUITETURA.md §5) mas **nenhuma tela o usa**. Caixa de Entrada não tem handlers de upload/extração ligados.
 
 **Causa estrutural**: Feature prometida não foi implementada; placeholder criado mas deixado inerte.
 
 **Princípio violado**: E9 (Teoria do programa — promessa não entregue), E3 (Interface profunda).
 
-**Consequência prevista**: 
+**Consequência prevista**:
+
 - Usuário tenta usar "Organizar documentos" na Caixa de Entrada
 - Componente não rende ou tela fica vazia
 - Confusão sobre funcionalidade
 
 **Evidência**:
+
 - `app/src/core/ui/PainelDeProposta.tsx` existe (34 linhas, exportado)
 - `app/src/telas/CaixaDeEntrada/index.tsx` não importa nem renderiza `<PainelDeProposta>`
 - `docs/app-aistudio/00_ARQUITETURA.md:197–201` diz "Componente que define o produto"
@@ -231,6 +238,7 @@ dominio/
 ---
 
 ### CRÍTICO #3 | BYOK Violado — Cliente Chama IA Diretamente
+
 **Sintoma**: `core/ia/gemini.ts:53` faz `fetch()` para `generativelanguage.googleapis.com` com a chave do usuário direto do navegador. ARQUITETURA.md §3.1 promete "servidor é o único lugar que fala com qualquer provedor".
 
 **Causa estrutural**: App é 100% client-side (Vite + React + Firebase JS SDK); backend não foi implementado.
@@ -238,11 +246,13 @@ dominio/
 **Princípio violado**: E6 (Fronteiras — domínio ignora tecnologia), E8 (Segurança — chave pessoal em cliente).
 
 **Consequência prevista**:
+
 - Chave de IA vaza se aparelho é comprometido (é client-side, portanto desprotegida contra malware local)
 - Não há como auditar uso de IA
 - Não há como implementar rate-limiting ou filtros no servidor
 
 **Evidência**:
+
 - `app/src/core/ia/gemini.ts:53` const url = `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${this.chave}`
 - `app/firestore.rules:139–144` nem menciona endpoints de IA
 - `app/src/core/ia/openaiCompat.ts:84` POST `${config.url_base}/chat/completions` com Authorization header (cliente)
@@ -251,6 +261,7 @@ dominio/
 ---
 
 ### CRÍTICO #4 | Acoplamento em Telas — Amplificação de Mudanças
+
 **Sintoma**: `telas/Painel/index.tsx` tem 23 imports, `telas/Ajustes/index.tsx` tem 19 states. Adicionar campo `data_exame` a Exame exige tocar 4 arquivos (dominio.ts, repositorioExames.ts, CaixaDeEntrada, Perfil).
 
 **Causa estrutural**: Telas importam direto de repositórios; sem camada de adapters/presenters; estado UI acoplado em telas.
@@ -258,11 +269,13 @@ dominio/
 **Princípio violado**: E3 (Profundidade — rasas), E1 (Ocultação — decisão Firestore conhecida por 10+ arquivos).
 
 **Consequência prevista**:
+
 - Cada mudança pequena exige vários commits
 - Risco de inconsistência entre telas
 - Onboarding de novo desenvolvedor = navegação por ~10 arquivos
 
 **Evidência**:
+
 - `app/src/telas/Painel/index.tsx:1–30` lista 23 imports
 - `app/src/telas/Ajustes/index.tsx:84–119` lista 19 useState calls
 - `app/src/types/dominio.ts:72–84` Exame type
@@ -271,6 +284,7 @@ dominio/
 ---
 
 ### CRÍTICO #5 | Sem Testes Fora de Domínio
+
 **Sintoma**: Apenas `dominio/` tem testes (11 testes); repositórios, telas e componentes = 0 testes. Mudança em repositório → sem indicação de break até produção.
 
 **Causa estrutural**: Acoplamento telas-repositórios dificulta teste; sem ferramenta de mock (jest, vitest com mocks).
@@ -278,11 +292,13 @@ dominio/
 **Princípio violado**: E5 (Testabilidade), E6 (Fronteiras).
 
 **Consequência prevista**:
+
 - Refatoração do Firestore schema → risco alto de regressão silenciosa
 - Alteração em `repositorioFamilias.ts` migrarDadosLegados → sem teste
 - Confiabilidade cai com crescimento de features
 
 **Evidência**:
+
 - `find app/src -name "*.test.ts"` retorna 3 testes (dominio, dominio, core/ia)
 - `app/src/modulos/membros/casos-de-uso/repositorioMembros.ts:1–62` sem .test.ts
 - `app/src/telas/Perfil/index.tsx:1–829` sem .test.tsx
@@ -294,6 +310,7 @@ dominio/
 ### P0 · Congelar a Erosão (Baixo Custo, Alto Impacto)
 
 #### P0-1 | Adicionar `dependency-cruiser` ao CI
+
 - **Mudança**: Instalar `dependency-cruiser` (ou `import-linter`); criar `.dependency-cruiserrc` com regras Firestore-schema-centralizadas; quebrar build se telas importam direto de repositórios de outros módulos.
 - **Arquivos afetados**: `app/package.json`, novo arquivo `.dependency-cruiserrc.json`, `app/.github/workflows/ci.yml` (se houver)
 - **Teste passa quando**: `npm run lint:arch` quebra ao adicionar `import { salvarMembro } from 'modulos/membros'` em tela fora de Perfil.
@@ -301,12 +318,14 @@ dominio/
 - **Por quê primeiro**: Impede piora enquanto resto é corrigido; máquina aplica, humano esquece
 
 #### P0-2 | Sincronizar ARQUITETURA.md com Realidade (Schema)
+
 - **Mudança**: Atualizar `docs/app-aistudio/00_ARQUITETURA.md` §4 de `/usuarios/{uid}` para `/familias/{familiaId}`; descrever migração legada em `garantirFamiliaDoUsuario()`; documentar `collectionGroup` queries.
 - **Arquivos afetados**: `docs/app-aistudio/00_ARQUITETURA.md`
 - **Teste passa quando**: Novo dev lê doc, encontra schema atual sem erros.
 - **Custo**: Muito baixo (30min)
 
 #### P0-3 | Marcar PainelDeProposta como "Não implementado" ou Implementar
+
 - **Opção A (rápido)**: Remover do doc §5; mover para Backlog de v2 com justificativa.
 - **Opção B (correto)**: Conectar CaixaDeEntrada ao PainelDeProposta; implementar aplicarProposta (1–2 dias).
 - **Arquivo**: `docs/app-aistudio/00_ARQUITETURA.md` (opção A) ou `app/src/telas/CaixaDeEntrada/index.tsx` + `app/src/core/database/repositorio.ts` (opção B).
@@ -317,14 +336,17 @@ dominio/
 ### P1 · Recuperar Testabilidade e Documentação (Médio Custo, Essencial)
 
 #### P1-1 | Escrever Testes de Integração para Repositórios
+
 - **Mudança**: Criar `app/src/modulos/membros/casos-de-uso/repositorioMembros.test.ts` com mock de Firestore (firebase-mock ou emulator); testar `listarMembros`, `salvarMembro`, `compartilharMembro`.
 - **Arquivos**: Novo arquivo `/membros/casos-de-uso/repositorioMembros.test.ts`; setup Firestore emulator em `vitest.config.ts`.
 - **Teste passa quando**: `npm test` executa 20+ testes de repositório, todos verdes, <2s.
 - **Custo**: Médio (2–3 dias para infraestrutura + 5 repositórios).
 
 #### P1-2 | Adicionar Comentários de Interface (JSDoc)
+
 - **Mudança**: `criarProvedor()`, `listarMembros()`, `calcularAlertas()`, `salvarFamilia()` ganham comentário /** tipo contrato + razão */.
 - **Exemplo**:
+
   ```typescript
   /**
    * Cria um provedor de IA baseado na configuração do usuário.
@@ -335,6 +357,7 @@ dominio/
    */
   export function criarProvedor(config?: ConfigProvedorIA): ProvedorIA { ... }
   ```
+
 - **Arquivos**: `core/ia/interface.ts`, `modulos/*/repositorio*.ts`, `dominio/alertas.ts` (+7 funções).
 - **Custo**: Baixo (2–3h).
 
@@ -343,6 +366,7 @@ dominio/
 ### P2 · Reduzir Amplificação de Mudanças (Médio Custo, Retorno Longo Prazo)
 
 #### P2-1 | Extrair Presenters de Telas (Refactoring incremental)
+
 - **Mudança**: Mover lógica de apresentação (cálculo de badge, formatação, filtering) de telas para módulos `presenters/` ou hooks. Exemplo: `usePainelData()` que retorna alertas pré-calculados em vez de telas calcularem.
 - **Afetado**: `telas/Painel/index.tsx` (430 linhas → 250 linhas) + novo `modulos/painel/usePainelData.ts`.
 - **Teste passa quando**: Painel renderiza idêntico mas com 50% menos imports, hook testável isolado.
@@ -350,7 +374,9 @@ dominio/
 - **Sequência**: Começar por Painel (mais imports) → Ajustes → CaixaDeEntrada.
 
 #### P2-2 | Consolidar Decisões Firestore (Schema Abstraction)
+
 - **Mudança**: Centralizar nomes de coleções e paths em `core/database/paths.ts`:
+
   ```typescript
   export const PATHS = {
     familia: (familiaId: string) => `familias/${familiaId}`,
@@ -359,6 +385,7 @@ dominio/
     ...
   };
   ```
+
   Todos os repositórios usam `PATHS.familia()` em vez de hardcoded.
 - **Arquivos**: Novo `core/database/paths.ts` + atualizar 7 repositórios.
 - **Teste passa quando**: Mover para nova estrutura = alterar 1 arquivo (`paths.ts`), não 10.
@@ -369,6 +396,7 @@ dominio/
 ### P3 · Endereçar BYOK Violado (Alto Custo, Crítico de Segurança)
 
 #### P3-1 | Planejamento: Backend para Chamadas de IA
+
 - **Decisão necessária**: O app precisa de um backend (Node.js/Python/Go) que:
   1. Recebe upload de arquivo + usuário token + configuração IA
   2. Valida token, chama IA com chave do usuário
@@ -381,7 +409,8 @@ dominio/
 - **Antes de começar**: Leia ARQUITETURA.md §2.1 (restrições de plataforma); clarificar se AI Studio permite backend externo.
 
 #### P3-2 | Implementação Serverless (se Vercel)
-- **Mudança**: 
+
+- **Mudança**:
   - Criar `api/chat/route.ts` (Next.js) ou `api/chat.ts` (Vercel Functions)
   - Receber: `{ token: string, config: { tipo, modelo, chave }, mensagens: [], arquivo?: ArrayBuffer }`
   - Usar `admin-sdk` ou cliente autenticado para validar token
@@ -396,10 +425,12 @@ dominio/
 ### P4 · Polimento e Documentação (Baixo Custo)
 
 #### P4-1 | Adicionar TypeDoc para Geração de Referência
+
 - **Mudança**: `npm install --save-dev typedoc`; gerar site com `npm run docs:build`.
 - **Custo**: 2h.
 
 #### P4-2 | Onboarding Guide
+
 - **Mudança**: Novo arquivo `docs/ONBOARDING.md` com:
   - "5 decisões voláteis e onde elas vivem"
   - "Como adicionar um novo tipo de alerta"
@@ -414,7 +445,7 @@ dominio/
 ### Riscos de NÃO Agir (6 meses)
 
 | Risco | Probabilidade | Impacto | Mitigação (nesta proposta) |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Novo dev usa /usuarios/{uid} porque doc diz assim | Alta | Médio (refactor + confusão) | P0-2: Sync doc |
 | Migração para backend depois é 2× mais cara | Média | Alto (refactor completo) | P3-1: Planejar já |
 | Tela fica com 1200+ linhas, impossível de manter | Alta | Alto (paralisia) | P2-1: Presenters |
@@ -424,7 +455,7 @@ dominio/
 ### Riscos DE Agir (remediação)
 
 | Risco | Probabilidade | Impacto | Mitigação |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Refactoring de telas quebra produção | Média | Médio | Começar por telas não-críticas (Onboarding, Login); branches de feature + testes (P1-1) |
 | Backend adiciona custo/complexidade | Média | Médio | P3-1: Planejar design antes; Vercel reduz ops |
 | Sincronizar doc = doc fica obsoleto de novo | Alta | Baixo | Fazer doc→código em mesmo commit; linter arquitetural (P0-1) força sync |
@@ -449,11 +480,12 @@ O Salus App tem **fundações arquiteturais sólidas** (zero ciclos, domínio pu
 
 Complementadas por **problemas de manutenção** (acoplamento em telas, sem testes de integração) que crescem exponencialmente com features novas.
 
-**Sequência recomendada**:  
+**Sequência recomendada**:
+
 1. **Semana 1** (P0): Congelar erosão — sync doc, linter CI, marcar PainelDeProposta
 2. **Semana 2–3** (P1): Testes de repositório + JSDoc comentários
 3. **Semana 4–5** (P2): Extrair Painel presenter; centralizar schema paths
 4. **Semana 6–8** (P3): Backend serverless para IA (crítico de segurança)
 5. **Semana 9+** (P4): Polimento + onboarding guide
 
-**Sem P3** (backend de IA), app **não cumpre a promessa BYOK** documentada em §3.1. Com P3, risco de vazamento de chave e auditoria cai para zero.
+- **Sem P3** (backend de IA), app **não cumpre a promessa BYOK** documentada em §3.1. Com P3, risco de vazamento de chave e auditoria cai para zero.
