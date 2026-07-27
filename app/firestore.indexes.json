@@ -1,4 +1,12 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "membros",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "compartilhado_com_uids", "arrayConfig": "CONTAINS" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

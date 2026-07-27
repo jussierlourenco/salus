@@ -3,7 +3,7 @@ import { Card, Botao, Campo } from '../../core/ui';
 import {
   Settings, Key, Download, Trash2,
   Shield, ChevronRight, CheckCircle2, AlertTriangle,
-  RefreshCw, Eye, EyeOff, Check, X, Sun, Moon, Users, Copy, LogIn, UserPlus
+  RefreshCw, Eye, EyeOff, Check, X, Sun, Moon, Users, Copy, LogIn, UserPlus, Link2
 } from 'lucide-react';
 import { useConfiguracao } from '../../core/config/ConfigContext';
 import { NavLink } from 'react-router-dom';
@@ -11,6 +11,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { useTema } from '../../core/ui/useTema';
 import { buscarFamilia, entrarEmFamilia, listarMembrosDaFamilia, type MembroFamilia } from '../../core/database/repositorioFamilias';
 import { listarMembros, listarMembrosCompartilhados, removerCompartilhamento } from '../../modulos/membros/casos-de-uso/repositorioMembros';
+import { vincularDocumentosExistentes } from '../../core/database/repositorio';
 import type { Membro } from '../../modulos/membros/entidades/membro';
 import type { ConfigProvedorIA, ProvedorIATipo } from '../../types/dominio';
 interface PresetItem {
@@ -108,6 +109,9 @@ export function Ajustes() {
   const [salvando, setSalvando] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+
+  // Vincular documentos
+  const [vinculandoDocs, setVinculandoDocs] = useState(false);
 
   // Modal de exclusão
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
@@ -785,6 +789,26 @@ export function Ajustes() {
                 disabled={exportando}
               >
                 {exportando ? 'Gerando arquivo .zip...' : 'Exportar .zip Completo'}
+              </Botao>
+              <Botao
+                variante="secundario"
+                tamanho="sm"
+                icone={vinculandoDocs ? <RefreshCw size={16} className="animate-spin" /> : <Link2 size={16} />}
+                onClick={async () => {
+                  if (!familiaId) return;
+                  setVinculandoDocs(true);
+                  try {
+                    const total = await vincularDocumentosExistentes(familiaId);
+                    setFeedback({ tipo: 'sucesso', texto: `${total} exame(s) vinculados ao documento original.` });
+                  } catch (e) {
+                    setFeedback({ tipo: 'erro', texto: 'Erro ao vincular: ' + (e as Error).message });
+                  } finally {
+                    setVinculandoDocs(false);
+                  }
+                }}
+                disabled={vinculandoDocs || !familiaId}
+              >
+                {vinculandoDocs ? 'Vinculando...' : 'Vincular exames antigos'}
               </Botao>
             </div>
           </div>
