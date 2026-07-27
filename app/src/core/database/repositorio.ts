@@ -29,52 +29,22 @@ export {
 } from '../../modulos/vacinas/casos-de-uso/repositorioVacinas';
 
 export {
+  listarEventos,
+  salvarEvento,
+  excluirEvento,
+} from '../../modulos/eventos/casos-de-uso/repositorioEventos';
+
+export type { Evento } from '../../modulos/eventos/entidades/evento';
+
+export {
   listarCaixaEntrada,
   salvarCaixaEntrada,
   atualizarStatusCaixaEntrada,
 } from '../../modulos/caixa-entrada/casos-de-uso/repositorioCaixaEntrada';
 
-import { collection, getDocs, doc, setDoc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { CaixaEntradaItem } from '../../modulos/caixa-entrada/entidades/caixaEntrada';
-
-export interface Evento {
-  id: string;
-  membro_id: string;
-  data: string;
-  tipo: string;
-  descricao: string;
-  profissional?: string;
-  local?: string;
-  notas?: string;
-  criado_em: string;
-}
-
-function colecaoEventos(familiaId: string) {
-  return collection(db, 'familias', familiaId, 'eventos');
-}
-
-export async function listarEventos(familiaId: string, membroId?: string): Promise<Evento[]> {
-  if (membroId) {
-    const q = query(colecaoEventos(familiaId), where('membro_id', '==', membroId));
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento);
-  }
-  const snap = await getDocs(colecaoEventos(familiaId));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento);
-}
-
-export async function salvarEvento(familiaId: string, evento: Partial<Evento> & { id?: string }): Promise<string> {
-  const id = evento.id ?? doc(colecaoEventos(familiaId)).id;
-  const agora = new Date().toISOString();
-  const dados = JSON.parse(JSON.stringify({
-    ...evento,
-    id,
-    criado_em: evento.criado_em ?? agora,
-  }));
-  await setDoc(doc(db, 'familias', familiaId, 'eventos', id), dados, { merge: true });
-  return id;
-}
 
 export async function vincularDocumentosExistentes(familiaId: string): Promise<number> {
   const ceSnap = await getDocs(query(

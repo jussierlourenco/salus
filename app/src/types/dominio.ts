@@ -4,6 +4,9 @@
  * Nomes em português para compatibilidade 1:1 com export/import.
  * ═══════════════════════════════════════════════════════ */
 
+import type { Evento } from '../modulos/eventos/entidades/evento';
+export type { Evento };
+
 export type TipoMembro = 'pessoa' | 'cao' | 'gato' | 'outro';
 export type Vinculo = 'biologico' | 'adotivo' | 'enteado';
 export type StatusMedicamento = 'em_uso' | 'prescrito' | 'descontinuado';
@@ -80,16 +83,6 @@ export interface Exame {
   faixa_referencia_laudo?: string; // string livre do laudo
   flag: FlagExame;
   documento_id?: string;
-  criado_em: string;
-}
-
-export interface Evento {
-  id: string;
-  membro_id: string;
-  data: string; // AAAA-MM-DD
-  tipo: string; // 'consulta' | 'sintoma' | 'cirurgia' | 'internacao' | 'outro'
-  descricao: string;
-  profissional?: string;
   criado_em: string;
 }
 

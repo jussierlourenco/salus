@@ -1,27 +1,17 @@
-import { useMemo, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import {
   Plus, Pill, ThermometerSun, Activity, Syringe, Stethoscope, NotebookPen,
 } from 'lucide-react';
-import { Card, Campo, Botao, EstadoVazio, StripCalendar, Timeline, TimelineEvent, BottomSheet } from '../../core/ui';
+import { Card, Campo, Botao, Carregando, EstadoVazio, StripCalendar, Timeline, TimelineEvent, BottomSheet } from '../../core/ui';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { listarEventos, salvarEvento } from '../../modulos/eventos/casos-de-uso/repositorioEventos';
+import type { Evento } from '../../modulos/eventos/entidades/evento';
 
 /**
- * Tipos e mock desta aba são um superset de `types/dominio.ts#Evento` (adiciona `timestamp`
- * com hora e `payload` estruturado) só para validar o visual. Quando existir
- * `modulos/eventos/casos-de-uso`, isto deve ser reconciliado com a entidade real.
+ * Categorias reconhecidas pela UI do Diário para ícone/cor/filtro. `Evento.tipo` no Firestore
+ * é livre (string) — qualquer valor fora deste conjunto (ex: extraído por IA) cai em 'outro'.
  */
 type TipoEventoDiario = 'medicamento' | 'sintoma' | 'medicao' | 'vacina' | 'consulta' | 'outro';
-
-interface EventoDiario {
-  id: string;
-  membro_id: string;
-  timestamp: string; // ISO 8601 completo (data + hora)
-  tipo: TipoEventoDiario;
-  payload: {
-    titulo: string;
-    valor?: string;
-    notas?: string;
-  };
-}
 
 const ICONE_POR_TIPO: Record<TipoEventoDiario, ComponentType<{ size?: number }>> = {
   medicamento: Pill,
@@ -50,6 +40,10 @@ const FILTROS: { id: 'todos' | TipoEventoDiario; label: string }[] = [
   { id: 'consulta', label: 'Consultas' },
 ];
 
+function categorizar(tipo: string): TipoEventoDiario {
+  return tipo in ICONE_POR_TIPO ? (tipo as TipoEventoDiario) : 'outro';
+}
+
 function paraISO(data: Date): string {
   const ano = data.getFullYear();
   const mes = String(data.getMonth() + 1).padStart(2, '0');
@@ -57,78 +51,15 @@ function paraISO(data: Date): string {
   return `${ano}-${mes}-${dia}`;
 }
 
-function timestampMock(diasAtras: number, hora: number, minuto: number): string {
-  const data = new Date();
-  data.setDate(data.getDate() - diasAtras);
-  data.setHours(hora, minuto, 0, 0);
-  return data.toISOString();
-}
-
-function gerarEventosMock(membroId: string): EventoDiario[] {
-  return [
-    {
-      id: 'mock-1',
-      membro_id: membroId,
-      timestamp: timestampMock(0, 8, 0),
-      tipo: 'medicamento',
-      payload: { titulo: 'Losartana 50mg', valor: '1 comprimido' },
-    },
-    {
-      id: 'mock-2',
-      membro_id: membroId,
-      timestamp: timestampMock(0, 9, 15),
-      tipo: 'medicao',
-      payload: { titulo: 'Pressão arterial', valor: '128/82 mmHg' },
-    },
-    {
-      id: 'mock-3',
-      membro_id: membroId,
-      timestamp: timestampMock(0, 13, 30),
-      tipo: 'sintoma',
-      payload: { titulo: 'Dor de cabeça leve', notas: 'Após o almoço; melhorou com repouso.' },
-    },
-    {
-      id: 'mock-4',
-      membro_id: membroId,
-      timestamp: timestampMock(0, 20, 0),
-      tipo: 'medicamento',
-      payload: { titulo: 'Losartana 50mg', valor: '1 comprimido' },
-    },
-    {
-      id: 'mock-5',
-      membro_id: membroId,
-      timestamp: timestampMock(1, 10, 0),
-      tipo: 'consulta',
-      payload: { titulo: 'Retorno com cardiologista', notas: 'Dra. Marina Costa — check-up de rotina.' },
-    },
-    {
-      id: 'mock-6',
-      membro_id: membroId,
-      timestamp: timestampMock(1, 16, 45),
-      tipo: 'vacina',
-      payload: { titulo: 'Influenza (dose anual)' },
-    },
-    {
-      id: 'mock-7',
-      membro_id: membroId,
-      timestamp: timestampMock(2, 7, 30),
-      tipo: 'medicao',
-      payload: { titulo: 'Glicemia em jejum', valor: '92 mg/dL' },
-    },
-  ];
-}
-
-function formatarHora(timestamp: string): string {
-  const data = new Date(timestamp);
-  return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
-
 interface AbaDiarioProps {
+  familiaId: string;
   membroId: string;
 }
 
-export function AbaDiario({ membroId }: AbaDiarioProps) {
-  const [eventos, setEventos] = useState<EventoDiario[]>(() => gerarEventosMock(membroId));
+export function AbaDiario({ familiaId, membroId }: AbaDiarioProps) {
+  const { usuario } = useAuth();
+  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [carregando, setCarregando] = useState(true);
   const [dataSelecionada, setDataSelecionada] = useState(() => paraISO(new Date()));
   const [filtroAtivo, setFiltroAtivo] = useState<'todos' | TipoEventoDiario>('todos');
   const [sheetAberto, setSheetAberto] = useState(false);
@@ -141,11 +72,28 @@ export function AbaDiario({ membroId }: AbaDiarioProps) {
   const [novoValor, setNovoValor] = useState('');
   const [novasNotas, setNovasNotas] = useState('');
 
+  const carregarEventos = async () => {
+    setCarregando(true);
+    try {
+      const lista = await listarEventos(familiaId, membroId);
+      setEventos(lista);
+    } catch (err) {
+      console.error('[AbaDiario] Erro ao carregar eventos:', err);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarEventos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familiaId, membroId]);
+
   const eventosDoDia = useMemo(() => {
     return eventos
-      .filter((ev) => paraISO(new Date(ev.timestamp)) === dataSelecionada)
-      .filter((ev) => filtroAtivo === 'todos' || ev.tipo === filtroAtivo)
-      .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+      .filter((ev) => ev.data === dataSelecionada)
+      .filter((ev) => filtroAtivo === 'todos' || categorizar(ev.tipo) === filtroAtivo)
+      .sort((a, b) => (a.hora ?? '').localeCompare(b.hora ?? ''));
   }, [eventos, dataSelecionada, filtroAtivo]);
 
   const fecharSheet = () => {
@@ -157,30 +105,28 @@ export function AbaDiario({ membroId }: AbaDiarioProps) {
     setNovasNotas('');
   };
 
-  const handleRegistrar = (e: React.FormEvent) => {
+  const handleRegistrar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!novoTitulo.trim()) return;
     setSalvando(true);
-
-    const [hora, minuto] = novaHora.split(':').map(Number);
-    const dataEvento = new Date(`${dataSelecionada}T00:00:00`);
-    dataEvento.setHours(hora || 0, minuto || 0, 0, 0);
-
-    const novoEvento: EventoDiario = {
-      id: `mock-${Date.now()}`,
-      membro_id: membroId,
-      timestamp: dataEvento.toISOString(),
-      tipo: novoTipo,
-      payload: {
-        titulo: novoTitulo.trim(),
+    try {
+      await salvarEvento(familiaId, {
+        membro_id: membroId,
+        data: dataSelecionada,
+        hora: novaHora || undefined,
+        tipo: novoTipo,
+        descricao: novoTitulo.trim(),
         valor: novoValor.trim() || undefined,
         notas: novasNotas.trim() || undefined,
-      },
-    };
-
-    setEventos((atual) => [...atual, novoEvento]);
-    setSalvando(false);
-    fecharSheet();
+        criado_por: usuario?.uid,
+      });
+      fecharSheet();
+      await carregarEventos();
+    } catch (err) {
+      alert('Erro ao registrar no Diário: ' + (err as Error).message);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (
@@ -209,7 +155,9 @@ export function AbaDiario({ membroId }: AbaDiarioProps) {
       </Card>
 
       {/* Feed principal: timeline vertical do dia selecionado */}
-      {eventosDoDia.length === 0 ? (
+      {carregando ? (
+        <Carregando texto="Carregando diário..." />
+      ) : eventosDoDia.length === 0 ? (
         <EstadoVazio
           icone={<NotebookPen size={40} />}
           titulo="Nenhum registro neste dia"
@@ -218,16 +166,16 @@ export function AbaDiario({ membroId }: AbaDiarioProps) {
       ) : (
         <Timeline>
           {eventosDoDia.map((ev) => {
-            const Icone = ICONE_POR_TIPO[ev.tipo];
+            const Icone = ICONE_POR_TIPO[categorizar(ev.tipo)];
             return (
               <TimelineEvent
                 key={ev.id}
-                hora={formatarHora(ev.timestamp)}
+                hora={ev.hora ?? '—'}
                 icone={<Icone size={14} />}
-                titulo={ev.payload.titulo}
-                valor={ev.payload.valor}
-                descricao={ev.payload.notas}
-                corIcone={ESTILO_ICONE_POR_TIPO[ev.tipo]}
+                titulo={ev.descricao}
+                valor={ev.valor}
+                descricao={ev.notas}
+                corIcone={ESTILO_ICONE_POR_TIPO[categorizar(ev.tipo)]}
               />
             );
           })}
@@ -293,8 +241,14 @@ export function AbaDiario({ membroId }: AbaDiarioProps) {
             <Botao variante="secundario" tamanho="sm" type="button" onClick={fecharSheet}>
               Cancelar
             </Botao>
-            <Botao tamanho="sm" type="submit" disabled={salvando || !novoTitulo.trim()} icone={<Plus size={16} />}>
-              Registrar
+            <Botao
+              tamanho="sm"
+              type="submit"
+              disabled={salvando || !novoTitulo.trim()}
+              icone={salvando ? undefined : <Plus size={16} />}
+              carregando={salvando}
+            >
+              {salvando ? 'Registrando...' : 'Registrar'}
             </Botao>
           </div>
         </form>

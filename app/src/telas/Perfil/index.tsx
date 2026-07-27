@@ -564,7 +564,7 @@ export function Perfil() {
       )}
 
       {/* Tab Content: Diário */}
-      {abaAtiva === 'Diário' && <AbaDiario membroId={id!} />}
+      {abaAtiva === 'Diário' && <AbaDiario familiaId={familiaId!} membroId={id!} />}
 
       {/* Modal Adicionar/Editar Medicamento */}
       {modalTipo === 'med' && createPortal(
