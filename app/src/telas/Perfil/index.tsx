@@ -531,10 +531,11 @@ export function Perfil() {
         </Card>
       )}
 
-      {/* Modal Adicionar Medicamento */}
-      {modalTipo === 'med' && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full space-y-4 shadow-2xl animate-fade-in">
+      {/* Modal Adicionar/Editar Medicamento */}
+      {modalTipo === 'med' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={fecharModal} />
+          <div className="relative bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full space-y-4 shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-texto flex items-center gap-2">
                 <Pill size={20} className="text-salus-400" />
@@ -565,13 +566,15 @@ export function Perfil() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Modal Adicionar Exame */}
-      {modalTipo === 'exame' && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full space-y-4 shadow-2xl animate-fade-in">
+      {/* Modal Adicionar/Editar Exame */}
+      {modalTipo === 'exame' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={fecharModal} />
+          <div className="relative bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full space-y-4 shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-texto flex items-center gap-2">
                 <Activity size={20} className="text-salus-400" />
@@ -604,13 +607,15 @@ export function Perfil() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal Vincular Exame Existente */}
-      {modalTipo === 'vincular-exame' && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full max-h-[85dvh] overflow-y-auto space-y-4 shadow-2xl animate-fade-in">
+      {modalTipo === 'vincular-exame' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={fecharModal} />
+          <div className="relative bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full max-h-[85dvh] overflow-y-auto space-y-4 shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-texto flex items-center gap-2">
                 <Link2 size={20} className="text-salus-400" />
@@ -652,7 +657,7 @@ export function Perfil() {
             )}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-borda">
-              <Botao variante="secundario" tamanho="sm" type="button" onClick={() => setModalTipo(null)}>Cancelar</Botao>
+              <Botao variante="secundario" tamanho="sm" type="button" onClick={fecharModal}>Cancelar</Botao>
               <Botao
                 tamanho="sm"
                 type="button"
@@ -664,13 +669,15 @@ export function Perfil() {
               </Botao>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Modal Adicionar Vacina */}
-      {modalTipo === 'vacina' && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full space-y-4 shadow-2xl animate-fade-in">
+      {/* Modal Adicionar/Editar Vacina */}
+      {modalTipo === 'vacina' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={fecharModal} />
+          <div className="relative bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full space-y-4 shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-texto flex items-center gap-2">
                 <Heart size={20} className="text-salus-400" />
@@ -693,7 +700,8 @@ export function Perfil() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal — Visualizador de Documento (portal para evitar corte por overflow do layout pai) */}
