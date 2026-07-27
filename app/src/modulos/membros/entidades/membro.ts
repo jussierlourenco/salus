@@ -7,6 +7,13 @@ export interface Relacao {
   tipo: TipoRelacao;
 }
 
+export interface PlanoSaude {
+  nome?: string;
+  numero?: string;
+  plano?: string;
+  data_inicio?: string;
+}
+
 export interface Membro {
   id: string;
   nome: string;
@@ -19,6 +26,7 @@ export interface Membro {
   relacoes: Relacao[];
   raca?: string;
   peso_kg?: number;
+  plano_saude?: PlanoSaude;
   compartilhado_com_uids?: string[];
   criado_em: string;
   atualizado_em: string;

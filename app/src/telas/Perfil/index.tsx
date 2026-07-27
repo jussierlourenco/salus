@@ -5,7 +5,7 @@ import { Card, Badge, Botao, Carregando, EstadoVazio, Campo } from '../../core/u
 import {
   User, Dog, Cat, FileText, Pill, Activity,
   ChevronLeft, Plus, Heart, X, RefreshCw, Link2, Eye, Download, FileWarning,
-  Pencil, Trash2, AlertTriangle
+  Pencil, Trash2, AlertTriangle, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { obterArquivoLocal } from '../../core/storage/indexedDB';
@@ -333,40 +333,71 @@ export function Perfil() {
 
       {/* Tab Content: Ficha */}
       {abaAtiva === 'Ficha' && (
-        <Card>
-          <h2 className="font-semibold text-texto mb-4 flex items-center gap-2">
-            <FileText size={18} className="text-salus-400" />
-            Ficha Clínica de Saúde
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-texto-secundario mb-1">Data de Nascimento</p>
-              <p className="text-sm font-medium text-texto">{membro.nascimento ?? 'Não informada'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-texto-secundario mb-1">Vínculo Familiar</p>
-              <p className="text-sm font-medium text-texto capitalize">{membro.vinculo}</p>
-            </div>
-            <div>
-              <p className="text-xs text-texto-secundario mb-1">Condições / Doenças Ativas</p>
-              <div className="flex flex-wrap gap-1">
-                {membro.condicoes_ativas && membro.condicoes_ativas.length > 0
-                  ? membro.condicoes_ativas.map((c) => <Badge key={c} variante="alerta">{c}</Badge>)
-                  : <span className="text-sm text-texto-secundario">Nenhuma registrada</span>
-                }
+        <div className="space-y-4">
+          <Card>
+            <h2 className="font-semibold text-texto mb-4 flex items-center gap-2">
+              <FileText size={18} className="text-salus-400" />
+              Ficha Clínica de Saúde
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-texto-secundario mb-1">Data de Nascimento</p>
+                <p className="text-sm font-medium text-texto">{membro.nascimento ?? 'Não informada'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-texto-secundario mb-1">Vínculo Familiar</p>
+                <p className="text-sm font-medium text-texto capitalize">{membro.vinculo}</p>
+              </div>
+              <div>
+                <p className="text-xs text-texto-secundario mb-1">Condições / Doenças Ativas</p>
+                <div className="flex flex-wrap gap-1">
+                  {membro.condicoes_ativas && membro.condicoes_ativas.length > 0
+                    ? membro.condicoes_ativas.map((c) => <Badge key={c} variante="alerta">{c}</Badge>)
+                    : <span className="text-sm text-texto-secundario">Nenhuma registrada</span>
+                  }
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-texto-secundario mb-1">Alergias Conhecidas</p>
+                <div className="flex flex-wrap gap-1">
+                  {membro.alergias && membro.alergias.length > 0
+                    ? membro.alergias.map((a) => <Badge key={a} variante="vencido">{a}</Badge>)
+                    : <span className="text-sm text-texto-secundario">Nenhuma conhecida</span>
+                  }
+                </div>
               </div>
             </div>
-            <div>
-              <p className="text-xs text-texto-secundario mb-1">Alergias Conocidas</p>
-              <div className="flex flex-wrap gap-1">
-                {membro.alergias && membro.alergias.length > 0
-                  ? membro.alergias.map((a) => <Badge key={a} variante="vencido">{a}</Badge>)
-                  : <span className="text-sm text-texto-secundario">Nenhuma conhecida</span>
-                }
+          </Card>
+
+          <Card>
+            <h2 className="font-semibold text-texto mb-4 flex items-center gap-2">
+              <ShieldCheck size={18} className="text-salus-400" />
+              Plano de Saúde
+            </h2>
+            {membro.plano_saude && (membro.plano_saude.nome || membro.plano_saude.numero || membro.plano_saude.plano || membro.plano_saude.data_inicio) ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-texto-secundario mb-1">Nome do Titular</p>
+                  <p className="text-sm font-medium text-texto">{membro.plano_saude.nome || 'Não informado'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-texto-secundario mb-1">Número da Carteirinha</p>
+                  <p className="text-sm font-medium text-texto">{membro.plano_saude.numero || 'Não informado'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-texto-secundario mb-1">Plano / Operadora</p>
+                  <p className="text-sm font-medium text-texto">{membro.plano_saude.plano || 'Não informado'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-texto-secundario mb-1">Data de Início</p>
+                  <p className="text-sm font-medium text-texto">{membro.plano_saude.data_inicio || 'Não informada'}</p>
+                </div>
               </div>
-            </div>
-          </div>
-        </Card>
+            ) : (
+              <p className="text-sm text-texto-secundario">Nenhum plano de saúde cadastrado. Edite o membro para adicionar.</p>
+            )}
+          </Card>
+        </div>
       )}
 
       {/* Tab Content: Medicamentos */}

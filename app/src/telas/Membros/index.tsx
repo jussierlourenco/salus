@@ -51,6 +51,10 @@ export function Membros() {
   const [raca, setRaca] = useState('');
   const [condicoesText, setCondicoesText] = useState('');
   const [alergiasText, setAlergiasText] = useState('');
+  const [planoNome, setPlanoNome] = useState('');
+  const [planoNumero, setPlanoNumero] = useState('');
+  const [planoPlano, setPlanoPlano] = useState('');
+  const [planoDataInicio, setPlanoDataInicio] = useState('');
 
   const carregar = async () => {
     if (!usuario || !familiaId) return;
@@ -84,6 +88,10 @@ export function Membros() {
     setRaca('');
     setCondicoesText('');
     setAlergiasText('');
+    setPlanoNome('');
+    setPlanoNumero('');
+    setPlanoPlano('');
+    setPlanoDataInicio('');
   };
 
   const abrirModalEdicao = (membro: Membro) => {
@@ -96,6 +104,10 @@ export function Membros() {
     setRaca(membro.raca ?? '');
     setCondicoesText((membro.condicoes_ativas ?? []).join(', '));
     setAlergiasText((membro.alergias ?? []).join(', '));
+    setPlanoNome(membro.plano_saude?.nome ?? '');
+    setPlanoNumero(membro.plano_saude?.numero ?? '');
+    setPlanoPlano(membro.plano_saude?.plano ?? '');
+    setPlanoDataInicio(membro.plano_saude?.data_inicio ?? '');
     setModalAberto(true);
   };
 
@@ -108,6 +120,14 @@ export function Membros() {
       const condicoes_ativas = condicoesText.split(',').map((s) => s.trim()).filter(Boolean);
       const alergias = alergiasText.split(',').map((s) => s.trim()).filter(Boolean);
 
+      const planoSaude = {
+        nome: planoNome.trim() || undefined,
+        numero: planoNumero.trim() || undefined,
+        plano: planoPlano.trim() || undefined,
+        data_inicio: planoDataInicio || undefined,
+      };
+      const temPlano = Object.values(planoSaude).some(Boolean);
+
       await salvarMembro(familiaId, {
         id: editandoId ?? undefined,
         nome: nome.trim(),
@@ -119,6 +139,7 @@ export function Membros() {
         condicoes_ativas,
         alergias,
         relacoes: [],
+        plano_saude: temPlano ? planoSaude : undefined,
       });
 
       fecharModal();
@@ -389,6 +410,38 @@ export function Membros() {
                 onChange={(e) => setAlergiasText(e.target.value)}
                 placeholder="ex: Dipirona, Penicilina"
               />
+
+              <div className="pt-2">
+                <p className="text-xs font-semibold text-texto-secundario uppercase tracking-wider mb-2">Plano de Saúde</p>
+                <div className="space-y-3">
+                  <Campo
+                    label="Nome do Titular"
+                    value={planoNome}
+                    onChange={(e) => setPlanoNome(e.target.value)}
+                    placeholder="ex: Maria Silva"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Campo
+                      label="Plano / Operadora"
+                      value={planoPlano}
+                      onChange={(e) => setPlanoPlano(e.target.value)}
+                      placeholder="ex: Unimed, Bradesco"
+                    />
+                    <Campo
+                      label="Número da Carteirinha"
+                      value={planoNumero}
+                      onChange={(e) => setPlanoNumero(e.target.value)}
+                      placeholder="ex: 0012345678"
+                    />
+                  </div>
+                  <Campo
+                    label="Data de Início"
+                    type="date"
+                    value={planoDataInicio}
+                    onChange={(e) => setPlanoDataInicio(e.target.value)}
+                  />
+                </div>
+              </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-borda">
                 <Botao variante="secundario" tamanho="sm" type="button" onClick={fecharModal}>
