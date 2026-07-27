@@ -2,13 +2,15 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { Botao } from '../../core/ui';
 import { useTema } from '../../core/ui/useTema';
-import { Stethoscope, Shield, Smartphone, Cloud, Sun, Moon } from 'lucide-react';
-import { useEffect } from 'react';
+import { Stethoscope, Shield, Smartphone, Cloud, Sun, Moon, HelpCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Faq } from './Faq';
 
 export function Login() {
   const { usuario, entrar, carregando } = useAuth();
   const { tema, alternarTema } = useTema();
   const navigate = useNavigate();
+  const [faqAberto, setFaqAberto] = useState(false);
 
   useEffect(() => {
     if (usuario) navigate('/', { replace: true });
@@ -93,7 +95,17 @@ export function Login() {
             O Salus organiza informações de saúde. Ele não diagnostica, não prescreve e não substitui médico ou veterinário.
           </p>
         </div>
+
+        <button
+          onClick={() => setFaqAberto(true)}
+          className="mt-6 mx-auto flex items-center gap-1.5 text-sm text-texto-secundario hover:text-texto transition-colors"
+        >
+          <HelpCircle size={16} />
+          Dúvidas frequentes
+        </button>
       </div>
+
+      <Faq aberto={faqAberto} onFechar={() => setFaqAberto(false)} />
     </div>
   );
 }
