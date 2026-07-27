@@ -335,6 +335,8 @@ export function CaixaDeEntrada() {
       const itens = itensSelecao.get(proposta.id) ?? [];
 
       try {
+        const arquivoId = `ce_${proposta.id}`;
+
         // Medicamentos
         const medsAceitos = proposta.proposta.medicamentos?.filter((_, idx) =>
           itens.find((i) => i.id === `med-${proposta.id}-${idx}`)?.aceito
@@ -357,6 +359,7 @@ export function CaixaDeEntrada() {
             ...ex,
             membro_id: membroId ?? ex.membro_id,
             data: ex.data ?? new Date().toISOString().split('T')[0],
+            documento_id: arquivoId,
           });
           salvos++;
         }
@@ -387,7 +390,6 @@ export function CaixaDeEntrada() {
         }
 
         // Salva o arquivo original no IndexedDB (navegador, por uid — não é dado compartilhado da família)
-        const arquivoId = `ce_${proposta.id}`;
         await salvarArquivoLocal(usuario.uid, arquivoId, proposta.arquivo);
 
         // Download automático do original pro dispositivo

@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react';
 import { Card, Badge, Botao, Carregando, EstadoVazio, Campo } from '../../core/ui';
 import {
   User, Dog, Cat, FileText, Pill, Activity,
-  ChevronLeft, Plus, Heart, X, RefreshCw, Link2
+  ChevronLeft, Plus, Heart, X, RefreshCw, Link2, Eye, Download, FileWarning
 } from 'lucide-react';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { obterArquivoLocal } from '../../core/storage/indexedDB';
 import { buscarMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
 import { listarMedicamentos, salvarMedicamento } from '../../modulos/medicamentos/casos-de-uso/repositorioMedicamentos';
 import { listarExames, salvarExame } from '../../modulos/exames/casos-de-uso/repositorioExames';
@@ -23,7 +24,7 @@ const iconeMembro = { pessoa: User, cao: Dog, gato: Cat, outro: User };
 export function Perfil() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const { familiaId: familiaIdContexto } = useAuth();
+  const { usuario, familiaId: familiaIdContexto } = useAuth();
   const familiaId = searchParams.get('familia') ?? familiaIdContexto;
 
   const [abaAtiva, setAbaAtiva] = useState<Aba>('Ficha');
@@ -42,6 +43,9 @@ export function Perfil() {
   const [carregandoExamesSemVinculo, setCarregandoExamesSemVinculo] = useState(false);
   const [exameSelecionadoId, setExameSelecionadoId] = useState<string | null>(null);
   const [vinculando, setVinculando] = useState(false);
+
+  // Visualizador de documento
+  const [docViewer, setDocViewer] = useState<{ storageId: string; nome: string; mime: string } | null>(null);
 
   // Form Medicamento
   const [medNome, setMedNome] = useState('');
@@ -363,6 +367,22 @@ export function Perfil() {
                     </div>
                     <p className="text-xs text-texto-secundario">Data do exame: {ex.data}</p>
                   </div>
+                  {ex.documento_id && (
+                    <button
+                      onClick={async () => {
+                        if (!usuario) return;
+                        const reg = await obterArquivoLocal(usuario.uid, ex.documento_id!);
+                        if (reg) {
+                          setDocViewer({ storageId: ex.documento_id!, nome: reg.registro.nome, mime: reg.registro.mime });
+                        }
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-medium text-texto-secundario hover:text-salus-400 px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-fundo-elevado transition-colors shrink-0"
+                      title="Ver documento original"
+                    >
+                      <Eye size={14} />
+                      Documento
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -568,6 +588,87 @@ export function Perfil() {
           </div>
         </div>
       )}
+
+      {/* Modal — Visualizador de Documento */}
+      {docViewer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDocViewer(null)} />
+          <div className="relative w-full max-w-3xl max-h-[90dvh] flex flex-col rounded-[var(--radius-xl)] bg-fundo-card border border-borda shadow-2xl animate-slide-up">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-borda shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText size={18} className="text-salus-400 shrink-0" />
+                <h2 className="text-sm font-semibold text-texto truncate">{docViewer.nome}</h2>
+              </div>
+              <button onClick={() => setDocViewer(null)} className="text-texto-secundario hover:text-texto p-2" aria-label="Fechar">
+                <X size={18} />
+              </button>
+            </div>
+            <VisualizadorDocumentoMVP
+              storageId={docViewer.storageId}
+              nomeArquivo={docViewer.nome}
+              mimeType={docViewer.mime}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VisualizadorDocumentoMVP({ storageId, nomeArquivo, mimeType }: {
+  storageId: string; nomeArquivo: string; mimeType: string;
+}) {
+  const { usuario } = useAuth();
+  const [urlOriginal, setUrlOriginal] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState(false);
+
+  const isImagem = mimeType.startsWith('image/');
+  const isPdf = mimeType === 'application/pdf';
+
+  useEffect(() => {
+    async function carregar() {
+      if (!usuario) return;
+      setCarregando(true);
+      setErro(false);
+      try {
+        const resultado = await obterArquivoLocal(usuario.uid, storageId);
+        if (!resultado) { setErro(true); return; }
+        const blob = new Blob([resultado.arquivo], { type: mimeType });
+        setUrlOriginal(URL.createObjectURL(blob));
+      } catch { setErro(true); }
+      finally { setCarregando(false); }
+    }
+    carregar();
+  }, [usuario, storageId, mimeType]);
+
+  if (carregando) return <div className="flex-1 flex items-center justify-center p-8"><p className="text-sm text-texto-secundario animate-pulse">Carregando documento...</p></div>;
+  if (erro) return (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-texto-secundario">
+      <FileWarning size={32} className="mb-2 text-alerta-400" />
+      <p className="text-sm font-medium text-alerta-400">Arquivo não encontrado</p>
+      <p className="text-xs mt-1">O documento original pode ter sido removido do armazenamento local.</p>
+    </div>
+  );
+  if (!urlOriginal) return null;
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 min-h-0 flex flex-col items-center">
+      {isImagem ? (
+        <img src={urlOriginal} alt={nomeArquivo} className="max-w-full max-h-[60dvh] rounded-[var(--radius-md)] object-contain" />
+      ) : isPdf ? (
+        <iframe src={urlOriginal} className="w-full h-[60dvh] rounded-[var(--radius-md)]" title={nomeArquivo} />
+      ) : (
+        <div className="flex flex-col items-center py-8 text-texto-secundario">
+          <FileText size={40} className="mb-2 opacity-40" />
+          <p className="text-sm">Pré-visualização não disponível para este tipo de arquivo.</p>
+        </div>
+      )}
+      <div className="flex justify-end w-full pt-3">
+        <Botao tamanho="sm" variante="secundario" icone={<Download size={14} />} onClick={() => { const a = document.createElement('a'); a.href = urlOriginal; a.download = nomeArquivo; a.click(); }}>
+          Baixar
+        </Botao>
+      </div>
     </div>
   );
 }
