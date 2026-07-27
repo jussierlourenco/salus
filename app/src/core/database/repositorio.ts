@@ -49,25 +49,25 @@ export interface Evento {
   criado_em: string;
 }
 
-function colecaoEventos(uid: string) {
-  return collection(db, 'usuarios', uid, 'eventos');
+function colecaoEventos(familiaId: string) {
+  return collection(db, 'familias', familiaId, 'eventos');
 }
 
-export async function listarEventos(uid: string, membroId?: string): Promise<Evento[]> {
-  const snap = await getDocs(colecaoEventos(uid));
+export async function listarEventos(familiaId: string, membroId?: string): Promise<Evento[]> {
+  const snap = await getDocs(colecaoEventos(familiaId));
   const todos = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento);
   if (membroId) return todos.filter((e) => e.membro_id === membroId);
   return todos;
 }
 
-export async function salvarEvento(uid: string, evento: Partial<Evento> & { id?: string }): Promise<string> {
-  const id = evento.id ?? doc(colecaoEventos(uid)).id;
+export async function salvarEvento(familiaId: string, evento: Partial<Evento> & { id?: string }): Promise<string> {
+  const id = evento.id ?? doc(colecaoEventos(familiaId)).id;
   const agora = new Date().toISOString();
   const dados = JSON.parse(JSON.stringify({
     ...evento,
     id,
     criado_em: evento.criado_em ?? agora,
   }));
-  await setDoc(doc(db, 'usuarios', uid, 'eventos', id), dados, { merge: true });
+  await setDoc(doc(db, 'familias', familiaId, 'eventos', id), dados, { merge: true });
   return id;
 }

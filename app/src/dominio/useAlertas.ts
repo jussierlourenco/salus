@@ -7,22 +7,22 @@ import { calcularAlertas } from './alertas';
 import type { Alerta } from '../types/dominio';
 
 export function useAlertas() {
-  const { usuario } = useAuth();
+  const { usuario, familiaId } = useAuth();
   const [alertas, setAlertas] = useState<Alerta[]>([]);
 
   useEffect(() => {
     let ativo = true;
 
     async function carregar() {
-      if (!usuario) {
+      if (!usuario || !familiaId) {
         setAlertas([]);
         return;
       }
       try {
         const [membros, medicamentos, vacinas] = await Promise.all([
-          listarMembros(usuario.uid),
-          listarMedicamentos(usuario.uid),
-          listarVacinas(usuario.uid),
+          listarMembros(familiaId),
+          listarMedicamentos(familiaId),
+          listarVacinas(familiaId),
         ]);
         if (ativo) setAlertas(calcularAlertas(membros, medicamentos, vacinas, []));
       } catch (err) {
@@ -34,7 +34,7 @@ export function useAlertas() {
     return () => {
       ativo = false;
     };
-  }, [usuario]);
+  }, [usuario, familiaId]);
 
   return alertas;
 }

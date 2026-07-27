@@ -2,21 +2,21 @@ import { collection, doc, getDocs, setDoc, updateDoc } from 'firebase/firestore'
 import { db } from '../../../core/database/firebase';
 import type { CaixaEntradaItem } from '../entidades/caixaEntrada';
 
-function colecaoCaixaEntrada(uid: string) {
-  return collection(db, 'usuarios', uid, 'caixa_entrada');
+function colecaoCaixaEntrada(familiaId: string) {
+  return collection(db, 'familias', familiaId, 'caixa_entrada');
 }
 
-function docCaixaEntrada(uid: string, id: string) {
-  return doc(db, 'usuarios', uid, 'caixa_entrada', id);
+function docCaixaEntrada(familiaId: string, id: string) {
+  return doc(db, 'familias', familiaId, 'caixa_entrada', id);
 }
 
-export async function listarCaixaEntrada(uid: string): Promise<CaixaEntradaItem[]> {
-  const snap = await getDocs(colecaoCaixaEntrada(uid));
+export async function listarCaixaEntrada(familiaId: string): Promise<CaixaEntradaItem[]> {
+  const snap = await getDocs(colecaoCaixaEntrada(familiaId));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as CaixaEntradaItem);
 }
 
-export async function salvarCaixaEntrada(uid: string, item: Partial<CaixaEntradaItem> & { id?: string }): Promise<string> {
-  const id = item.id ?? doc(colecaoCaixaEntrada(uid)).id;
+export async function salvarCaixaEntrada(familiaId: string, item: Partial<CaixaEntradaItem> & { id?: string }): Promise<string> {
+  const id = item.id ?? doc(colecaoCaixaEntrada(familiaId)).id;
   const agora = new Date().toISOString();
   const dados = JSON.parse(JSON.stringify({
     ...item,
@@ -24,27 +24,27 @@ export async function salvarCaixaEntrada(uid: string, item: Partial<CaixaEntrada
     criado_em: item.criado_em ?? agora,
     atualizado_em: agora,
   }));
-  await setDoc(docCaixaEntrada(uid, id), dados, { merge: true });
+  await setDoc(docCaixaEntrada(familiaId, id), dados, { merge: true });
   return id;
 }
 
 export async function atualizarStatusCaixaEntrada(
-  uid: string,
+  familiaId: string,
   itemId: string,
   status: CaixaEntradaItem['status']
 ): Promise<void> {
-  await updateDoc(docCaixaEntrada(uid, itemId), {
+  await updateDoc(docCaixaEntrada(familiaId, itemId), {
     status,
     atualizado_em: new Date().toISOString(),
   });
 }
 
 export async function atualizarCaixaEntrada(
-  uid: string,
+  familiaId: string,
   itemId: string,
   dados: Partial<Omit<CaixaEntradaItem, 'id' | 'criado_em'>>
 ): Promise<void> {
-  await updateDoc(docCaixaEntrada(uid, itemId), {
+  await updateDoc(docCaixaEntrada(familiaId, itemId), {
     ...dados,
     atualizado_em: new Date().toISOString(),
   } as Record<string, unknown>);

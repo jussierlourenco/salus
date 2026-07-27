@@ -3,10 +3,12 @@ import { Card, Botao, Campo } from '../../core/ui';
 import {
   Settings, Key, Download, Trash2,
   Shield, ChevronRight, CheckCircle2, AlertTriangle,
-  RefreshCw, Eye, EyeOff, Check, X, Sun, Moon
+  RefreshCw, Eye, EyeOff, Check, X, Sun, Moon, Users, Copy, LogIn
 } from 'lucide-react';
 import { useConfiguracao } from '../../core/config/ConfigContext';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { useTema } from '../../core/ui/useTema';
+import { buscarFamilia, entrarEmFamilia, listarMembrosDaFamilia, type MembroFamilia } from '../../core/database/repositorioFamilias';
 import type { ConfigProvedorIA, ProvedorIATipo } from '../../types/dominio';
 
 interface PresetItem {
@@ -74,8 +76,16 @@ const PRESETS: PresetItem[] = [
 export function Ajustes() {
   const { config, salvarConfigIA, testarIA, exportarDadosZip, apagarConta } = useConfiguracao();
   const { tema, alternarTema } = useTema();
+  const { usuario, familiaId, recarregarUsuarioSalus } = useAuth();
 
   const [secaoAberta, setSecaoAberta] = useState<string | null>('ia');
+
+  // Família compartilhada
+  const [membrosFamilia, setMembrosFamilia] = useState<MembroFamilia[]>([]);
+  const [codigoCopiado, setCodigoCopiado] = useState(false);
+  const [codigoEntrar, setCodigoEntrar] = useState('');
+  const [entrandoFamilia, setEntrandoFamilia] = useState(false);
+  const [feedbackFamilia, setFeedbackFamilia] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
   // Estado do formulário de IA
   const [presetSel, setPresetSel] = useState<string>('gemini');
@@ -113,8 +123,56 @@ export function Ajustes() {
     }
   }, []);
 
+  useEffect(() => {
+    async function carregarMembrosFamilia() {
+      if (!familiaId) return;
+      try {
+        const familia = await buscarFamilia(familiaId);
+        if (familia) {
+          setMembrosFamilia(await listarMembrosDaFamilia(familia));
+        }
+      } catch (e) {
+        console.warn('[Ajustes] Erro ao carregar membros da família:', e);
+      }
+    }
+    carregarMembrosFamilia();
+  }, [familiaId]);
+
   const toggleSecao = (id: string) => {
     setSecaoAberta(secaoAberta === id ? null : id);
+  };
+
+  const handleCopiarCodigo = async () => {
+    if (!familiaId) return;
+    await navigator.clipboard.writeText(familiaId);
+    setCodigoCopiado(true);
+    setTimeout(() => setCodigoCopiado(false), 2000);
+  };
+
+  const handleEntrarFamilia = async () => {
+    const codigo = codigoEntrar.trim();
+    if (!codigo) return;
+    setEntrandoFamilia(true);
+    setFeedbackFamilia(null);
+    try {
+      if (!usuario) {
+        setFeedbackFamilia({ tipo: 'erro', texto: 'Usuário não autenticado.' });
+        return;
+      }
+      const familia = await buscarFamilia(codigo);
+      if (!familia) {
+        setFeedbackFamilia({ tipo: 'erro', texto: 'Código de convite inválido ou família não encontrada.' });
+        return;
+      }
+      await entrarEmFamilia(codigo, usuario.uid);
+      await recarregarUsuarioSalus();
+      setCodigoEntrar('');
+      setFeedbackFamilia({ tipo: 'sucesso', texto: 'Você entrou na família com sucesso!' });
+    } catch (e) {
+      setFeedbackFamilia({ tipo: 'erro', texto: 'Erro ao entrar na família: ' + (e as Error).message });
+    } finally {
+      setEntrandoFamilia(false);
+    }
   };
 
   const selecionarPreset = (p: PresetItem) => {
@@ -409,6 +467,110 @@ export function Ajustes() {
                 >
                   Remover Chave
                 </Botao>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Família Compartilhada Card */}
+      <Card>
+        <button
+          onClick={() => toggleSecao('familia')}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-fundo-elevado flex items-center justify-center">
+              <Users size={20} className="text-texto-secundario" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-texto">Família Compartilhada</h2>
+              <p className="text-xs text-texto-secundario">
+                {membrosFamilia.length} {membrosFamilia.length === 1 ? 'membro' : 'membros'} com acesso ao painel
+              </p>
+            </div>
+          </div>
+          <ChevronRight size={20} className={`text-texto-secundario transition-transform ${secaoAberta === 'familia' ? 'rotate-90' : ''}`} />
+        </button>
+
+        {secaoAberta === 'familia' && (
+          <div className="mt-4 pt-4 border-t border-borda space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-texto">Membros com acesso</p>
+              <div className="space-y-1.5">
+                {membrosFamilia.map((m) => (
+                  <div key={m.uid} className="flex items-center gap-2.5 p-2 rounded-[var(--radius-md)] bg-fundo/50 border border-borda/50">
+                    {m.foto_url ? (
+                      <img src={m.foto_url} alt={m.nome ?? m.uid} className="w-7 h-7 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-salus-600/20 flex items-center justify-center text-xs font-semibold text-salus-400">
+                        {(m.nome ?? '?').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="text-sm text-texto">{m.nome ?? m.uid}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-borda space-y-2">
+              <p className="text-sm font-medium text-texto">Convidar um familiar</p>
+              <p className="text-xs text-texto-secundario">
+                Compartilhe este código com quem também vai cuidar da família — ao entrar, essa pessoa passa a ver os mesmos dados.
+              </p>
+              <div className="flex gap-2">
+                <div className="flex-1 px-3 py-2 rounded-[var(--radius-md)] bg-fundo-elevado border border-borda text-texto text-sm font-mono truncate">
+                  {familiaId ?? '—'}
+                </div>
+                <Botao
+                  variante="secundario"
+                  tamanho="sm"
+                  onClick={handleCopiarCodigo}
+                  icone={codigoCopiado ? <Check size={16} /> : <Copy size={16} />}
+                >
+                  {codigoCopiado ? 'Copiado!' : 'Copiar código'}
+                </Botao>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-borda space-y-2">
+              <p className="text-sm font-medium text-texto">Entrar em uma família existente</p>
+              <p className="text-xs text-texto-secundario">
+                Cole aqui o código de convite recebido para passar a compartilhar o painel dessa família.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={codigoEntrar}
+                  onChange={(e) => setCodigoEntrar(e.target.value)}
+                  placeholder="Cole o código de convite"
+                  className="flex-1 px-3 py-2 rounded-[var(--radius-md)] bg-fundo-elevado border border-borda text-texto text-sm focus:outline-none focus:border-salus-500"
+                />
+                <Botao
+                  variante="secundario"
+                  tamanho="sm"
+                  onClick={handleEntrarFamilia}
+                  disabled={!codigoEntrar.trim() || entrandoFamilia}
+                  icone={entrandoFamilia ? <RefreshCw size={16} className="animate-spin" /> : <LogIn size={16} />}
+                >
+                  {entrandoFamilia ? 'Entrando...' : 'Entrar'}
+                </Botao>
+              </div>
+              {feedbackFamilia && (
+                <div
+                  className={`p-3 rounded-[var(--radius-md)] text-sm flex items-start gap-2.5 border ${
+                    feedbackFamilia.tipo === 'sucesso'
+                      ? 'bg-salus-950/40 border-salus-500/40 text-salus-300'
+                      : 'bg-alerta-950/40 border-alerta-500/40 text-alerta-300'
+                  }`}
+                >
+                  {feedbackFamilia.tipo === 'sucesso' ? (
+                    <CheckCircle2 size={18} className="text-salus-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle size={18} className="text-alerta-400 shrink-0 mt-0.5" />
+                  )}
+                  <span>{feedbackFamilia.texto}</span>
+                </div>
               )}
             </div>
           </div>

@@ -2,9 +2,30 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Todo dado do Salus App vive sob /usuarios/{uid}/... — dono do uid é o único
-    // que pode ler ou escrever qualquer documento na própria árvore.
+    // Dado compartilhado do Salus App vive sob /familias/{familiaId}/... — qualquer
+    // uid listado em membros_uids pode ler/escrever toda a árvore da família.
     // Ver docs/app-aistudio/00_ARQUITETURA.md §4.
+    match /familias/{familiaId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.membros_uids;
+      allow create: if request.auth != null && request.resource.data.membros_uids == [request.auth.uid];
+      allow update: if request.auth != null && (
+        request.auth.uid in resource.data.membros_uids ||
+        (
+          !(request.auth.uid in resource.data.membros_uids) &&
+          request.resource.data.membros_uids == resource.data.membros_uids.concat([request.auth.uid]) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['membros_uids', 'atualizado_em'])
+        )
+      );
+      allow delete: if false;
+    }
+
+    match /familias/{familiaId}/{documento=**} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid in get(/databases/$(database)/documents/familias/$(familiaId)).data.membros_uids;
+    }
+
+    // Dados legados de /usuarios/{uid}/... (backup silencioso da migração para
+    // familias/{familiaId}/...) — dono do uid continua podendo ler/escrever.
     match /usuarios/{uid}/{documento=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }

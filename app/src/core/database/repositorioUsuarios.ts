@@ -55,6 +55,10 @@ export async function atualizarStatusUsuario(
   await updateDoc(docUsuario(uid), dados);
 }
 
+export async function atualizarFamiliaIdUsuario(uid: string, familiaId: string): Promise<void> {
+  await updateDoc(docUsuario(uid), { familia_id: familiaId });
+}
+
 export async function listarUsuarios(): Promise<UsuarioSalus[]> {
   const q = query(collection(db, COLECAO), orderBy('criado_em', 'desc'));
   const snap = await getDocs(q);

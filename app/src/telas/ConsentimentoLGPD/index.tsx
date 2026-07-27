@@ -21,17 +21,17 @@ function SecaoLGPD({ icon: Icone, titulo, children }: { icon: React.ElementType;
 }
 
 export function ConsentimentoLGPD() {
-  const { usuario } = useAuth();
+  const { familiaId } = useAuth();
   const { config, refreshConfig } = useConfiguracao();
   const navigate = useNavigate();
   const [aceito, setAceito] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
   const handleAceitar = async () => {
-    if (!usuario || !aceito) return;
+    if (!familiaId || !aceito) return;
     setSalvando(true);
     try {
-      await salvarConfigUsuario(usuario.uid, {
+      await salvarConfigUsuario(familiaId, {
         ...config,
         consentimentos: { lgpd: true, disclaimer_clinico: true, dados_terceiros: true },
         versao_consentimento: VERSAO_CONSENTIMENTO,

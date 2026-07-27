@@ -89,7 +89,7 @@ function fmtDataSimples(d?: string): string {
 // ── Componente principal ──
 
 export function CaixaDeEntrada() {
-  const { usuario } = useAuth();
+  const { usuario, familiaId } = useAuth();
   const { config } = useConfiguracao();
 
   const temChaveIA = Boolean(config.provedor_ia?.chave);
@@ -118,8 +118,8 @@ export function CaixaDeEntrada() {
   const [contextoFamilia, setContextoFamilia] = useState('');
 
   useEffect(() => {
-    if (!usuario) return;
-    listarMembros(usuario.uid).then((lista) => {
+    if (!familiaId) return;
+    listarMembros(familiaId).then((lista) => {
       setMembros(lista);
       setContextoFamilia(
         lista
@@ -127,7 +127,7 @@ export function CaixaDeEntrada() {
           .join('; ')
       );
     });
-  }, [usuario]);
+  }, [familiaId]);
 
   // ── Upload handlers ──
 
@@ -161,7 +161,7 @@ export function CaixaDeEntrada() {
   // ── IA Extraction ──
 
   const extrairComIA = async () => {
-    if (!usuario || arquivos.length === 0 || !temChaveIA) return;
+    if (!familiaId || arquivos.length === 0 || !temChaveIA) return;
 
     setMsgErro('');
     setEtapa('extraindo');
@@ -169,7 +169,7 @@ export function CaixaDeEntrada() {
     setTotalExtrair(arquivos.length);
 
     const provedor = criarProvedor(config.provedor_ia);
-    const uid = usuario.uid;
+    const uid = familiaId;
     const agoraExtraindo = Date.now();
     const resultados: PropostaArquivo[] = [];
     const docIds: Record<string, string> = {};
@@ -321,10 +321,10 @@ export function CaixaDeEntrada() {
   // ── Confirmar e salvar ──
 
   const confirmar = async () => {
-    if (!usuario) return;
+    if (!familiaId || !usuario) return;
     setEtapa('salvando');
 
-    const uid = usuario.uid;
+    const uid = familiaId;
     let salvos = 0;
     const erros: string[] = [];
 
@@ -386,9 +386,9 @@ export function CaixaDeEntrada() {
           salvos++;
         }
 
-        // Salva o arquivo original no IndexedDB (navegador)
+        // Salva o arquivo original no IndexedDB (navegador, por uid — não é dado compartilhado da família)
         const arquivoId = `ce_${proposta.id}`;
-        await salvarArquivoLocal(uid, arquivoId, proposta.arquivo);
+        await salvarArquivoLocal(usuario.uid, arquivoId, proposta.arquivo);
 
         // Download automático do original pro dispositivo
         try {
@@ -447,10 +447,10 @@ export function CaixaDeEntrada() {
 
   const descartar = async () => {
     // Limpa items 'processando' do Firestore
-    if (usuario) {
+    if (familiaId) {
       for (const fsId of Object.values(firestoreDocIds)) {
         try {
-          await atualizarCaixaEntrada(usuario.uid, fsId, { status: 'descartado' });
+          await atualizarCaixaEntrada(familiaId, fsId, { status: 'descartado' });
         } catch {
           // cleanup best-effort
         }

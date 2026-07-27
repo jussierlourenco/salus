@@ -22,7 +22,7 @@ const coresTipo = {
 };
 
 export function Membros() {
-  const { usuario } = useAuth();
+  const { familiaId } = useAuth();
   const [membros, setMembros] = useState<Membro[]>([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -46,10 +46,10 @@ export function Membros() {
   const [alergiasText, setAlergiasText] = useState('');
 
   const carregar = async () => {
-    if (!usuario) return;
+    if (!familiaId) return;
     setCarregando(true);
     try {
-      const lista = await listarMembros(usuario.uid);
+      const lista = await listarMembros(familiaId);
       setMembros(lista);
     } catch (err) {
       console.error('[Membros] Erro ao carregar do Firestore:', err);
@@ -60,7 +60,7 @@ export function Membros() {
 
   useEffect(() => {
     carregar();
-  }, [usuario]);
+  }, [familiaId]);
 
   const fecharModal = () => {
     setModalAberto(false);
@@ -90,14 +90,14 @@ export function Membros() {
 
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!usuario || !nome.trim()) return;
+    if (!familiaId || !nome.trim()) return;
 
     setSalvando(true);
     try {
       const condicoes_ativas = condicoesText.split(',').map((s) => s.trim()).filter(Boolean);
       const alergias = alergiasText.split(',').map((s) => s.trim()).filter(Boolean);
 
-      await salvarMembro(usuario.uid, {
+      await salvarMembro(familiaId, {
         id: editandoId ?? undefined,
         nome: nome.trim(),
         tipo,
@@ -120,11 +120,11 @@ export function Membros() {
   };
 
   const handleExcluir = async () => {
-    if (!usuario || !membroExcluir) return;
+    if (!familiaId || !membroExcluir) return;
 
     setExcluindo(true);
     try {
-      await excluirMembro(usuario.uid, membroExcluir.id);
+      await excluirMembro(familiaId, membroExcluir.id);
       setMembroExcluir(null);
       await carregar();
     } catch (err) {

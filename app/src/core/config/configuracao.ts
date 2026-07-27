@@ -5,8 +5,8 @@ import { criarProvedor } from '../ia/interface';
 
 const CONFIG_DOC = 'geral';
 
-function docConfig(uid: string) {
-  return doc(db, 'usuarios', uid, 'config', CONFIG_DOC);
+function docConfig(familiaId: string) {
+  return doc(db, 'familias', familiaId, 'config', CONFIG_DOC);
 }
 
 export const CONFIG_PADRAO: ConfigUsuario = {
@@ -27,9 +27,9 @@ const MODELOS_DEPRECIADOS = [
   'gemini-1.5-flash',
 ];
 
-export async function obterConfigUsuario(uid: string): Promise<ConfigUsuario> {
+export async function obterConfigUsuario(familiaId: string): Promise<ConfigUsuario> {
   try {
-    const snap = await getDoc(docConfig(uid));
+    const snap = await getDoc(docConfig(familiaId));
     if (snap.exists()) {
       const config = { ...CONFIG_PADRAO, ...snap.data() } as ConfigUsuario;
 
@@ -40,7 +40,7 @@ export async function obterConfigUsuario(uid: string): Promise<ConfigUsuario> {
       ) {
         config.provedor_ia = { ...config.provedor_ia, modelo: 'gemini-2.5-flash' };
         // Salva a correção no Firestore em segundo plano
-        salvarConfigUsuario(uid, config).catch(() => {});
+        salvarConfigUsuario(familiaId, config).catch(() => {});
       }
 
       return config;
@@ -51,8 +51,8 @@ export async function obterConfigUsuario(uid: string): Promise<ConfigUsuario> {
   return CONFIG_PADRAO;
 }
 
-export async function salvarConfigUsuario(uid: string, config: Partial<ConfigUsuario>): Promise<void> {
-  const ref = docConfig(uid);
+export async function salvarConfigUsuario(familiaId: string, config: Partial<ConfigUsuario>): Promise<void> {
+  const ref = docConfig(familiaId);
   const payload = {
     ...config,
     atualizado_em: new Date().toISOString(),
@@ -84,11 +84,11 @@ export async function testarConexaoIA(configIA: ConfigProvedorIA): Promise<{ ok:
   }
 }
 
-export async function apagarTodosDadosUsuario(uid: string): Promise<void> {
+export async function apagarTodosDadosUsuario(familiaId: string): Promise<void> {
   const colecoes = ['membros', 'medicamentos', 'exames', 'vacinas', 'eventos', 'caixa_entrada', 'config'];
 
   for (const colNome of colecoes) {
-    const colRef = collection(db, 'usuarios', uid, colNome);
+    const colRef = collection(db, 'familias', familiaId, colNome);
     const snap = await getDocs(colRef);
     for (const d of snap.docs) {
       await deleteDoc(d.ref);

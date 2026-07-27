@@ -136,7 +136,7 @@ function CardTimeline({
 // ── Componente Principal ──
 
 export function Painel() {
-  const { usuario } = useAuth();
+  const { familiaId } = useAuth();
   const navigate = useNavigate();
   const { config } = useConfiguracao();
   const [carregando, setCarregando] = useState(true);
@@ -156,16 +156,16 @@ export function Painel() {
 
   useEffect(() => {
     async function carregar() {
-      if (!usuario) return;
+      if (!familiaId) return;
       setCarregando(true);
       try {
         const [mList, medList, exList, vacList, evtList, ceList] = await Promise.all([
-          listarMembros(usuario.uid),
-          listarMedicamentos(usuario.uid),
-          listarExames(usuario.uid),
-          listarVacinas(usuario.uid),
-          listarEventos(usuario.uid),
-          listarCaixaEntrada(usuario.uid),
+          listarMembros(familiaId),
+          listarMedicamentos(familiaId),
+          listarExames(familiaId),
+          listarVacinas(familiaId),
+          listarEventos(familiaId),
+          listarCaixaEntrada(familiaId),
         ]);
         setMembros(mList);
         setMedicamentos(medList);
@@ -181,7 +181,7 @@ export function Painel() {
       }
     }
     carregar();
-  }, [usuario]);
+  }, [familiaId]);
 
   if (carregando) return <Carregando texto="Carregando painel..." />;
 
@@ -408,8 +408,8 @@ export function Painel() {
           mimeType={docAberto.mime_type}
           onFechar={() => setDocAberto(null)}
           onSaveMarkdown={async (markdown) => {
-            if (!usuario || !docAberto) return;
-            await atualizarCaixaEntrada(usuario.uid, docAberto.id, {
+            if (!familiaId || !docAberto) return;
+            await atualizarCaixaEntrada(familiaId, docAberto.id, {
               proposta: { ...docAberto.proposta, markdown_gerado: markdown },
             });
             setDocAberto((prev) =>

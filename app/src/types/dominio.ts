@@ -171,7 +171,11 @@ export interface ConfigUsuario {
 }
 
 export interface Familia {
+  id: string;
   nome: string;
+  membros_uids: string[];
+  criado_por: string;
+  criado_em: string;
   atualizado_em: string;
 }
 
@@ -189,6 +193,7 @@ export interface UsuarioSalus {
   criado_em: string;
   aprovado_em?: string;
   aprovado_por?: string;
+  familia_id?: string;
 }
 
 // ── Alertas do Painel ──

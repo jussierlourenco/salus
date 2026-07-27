@@ -15,6 +15,7 @@ import {
   listarVacinas,
   listarEventos,
 } from '../database/repositorio';
+import { buscarFamilia, sairDaFamilia } from '../database/repositorioFamilias';
 import { exportarParaZip, baixarArquivo } from '../storage/exportImport';
 
 const STORAGE_KEY = 'salus_config_usuario';
@@ -44,7 +45,7 @@ interface ConfigContexto {
 const ConfigContext = createContext<ConfigContexto | null>(null);
 
 export function ConfigProvider({ children }: { children: ReactNode }) {
-  const { usuario } = useAuth();
+  const { usuario, familiaId } = useAuth();
   const [config, setConfig] = useState<ConfigUsuario>(() => {
     try {
       const local = localStorage.getItem(STORAGE_KEY);
@@ -60,12 +61,12 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     let ativo = true;
 
     async function carregar() {
-      if (!usuario) {
+      if (!usuario || !familiaId) {
         setCarregando(false);
         return;
       }
       setCarregando(true);
-      const remoto = await obterConfigUsuario(usuario.uid);
+      const remoto = await obterConfigUsuario(familiaId);
       if (ativo) {
         setConfig(remoto);
         try {
@@ -81,11 +82,11 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     return () => {
       ativo = false;
     };
-  }, [usuario]);
+  }, [usuario, familiaId]);
 
   const refreshConfig = async () => {
-    if (!usuario) return;
-    const remoto = await obterConfigUsuario(usuario.uid);
+    if (!familiaId) return;
+    const remoto = await obterConfigUsuario(familiaId);
     setConfig(remoto);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(paraCacheSemSegredos(remoto)));
@@ -107,8 +108,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       console.warn('[ConfigContext] Falha ao salvar no localStorage:', e);
     }
 
-    if (usuario) {
-      await salvarConfigUsuario(usuario.uid, nova);
+    if (familiaId) {
+      await salvarConfigUsuario(familiaId, nova);
     }
   };
 
@@ -117,13 +118,12 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   };
 
   const exportarDadosZip = async () => {
-    const uid = usuario?.uid ?? 'anonimo';
     const [membros, medicamentos, exames, vacinas, eventos] = await Promise.all([
-      usuario ? listarMembros(uid) : Promise.resolve([]),
-      usuario ? listarMedicamentos(uid) : Promise.resolve([]),
-      usuario ? listarExames(uid) : Promise.resolve([]),
-      usuario ? listarVacinas(uid) : Promise.resolve([]),
-      usuario ? listarEventos(uid) : Promise.resolve([]),
+      familiaId ? listarMembros(familiaId) : Promise.resolve([]),
+      familiaId ? listarMedicamentos(familiaId) : Promise.resolve([]),
+      familiaId ? listarExames(familiaId) : Promise.resolve([]),
+      familiaId ? listarVacinas(familiaId) : Promise.resolve([]),
+      familiaId ? listarEventos(familiaId) : Promise.resolve([]),
     ]);
 
     const blob = await exportarParaZip({
@@ -139,8 +139,13 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   };
 
   const apagarConta = async () => {
-    if (usuario) {
-      await apagarTodosDadosUsuario(usuario.uid);
+    if (usuario && familiaId) {
+      const familia = await buscarFamilia(familiaId);
+      if (familia && familia.membros_uids.length > 1) {
+        await sairDaFamilia(familiaId, usuario.uid);
+      } else {
+        await apagarTodosDadosUsuario(familiaId);
+      }
     }
     localStorage.removeItem(STORAGE_KEY);
     setConfig(CONFIG_PADRAO);

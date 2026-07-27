@@ -22,7 +22,7 @@ const iconeMembro = { pessoa: User, cao: Dog, gato: Cat, outro: User };
 
 export function Perfil() {
   const { id } = useParams<{ id: string }>();
-  const { usuario } = useAuth();
+  const { familiaId } = useAuth();
 
   const [abaAtiva, setAbaAtiva] = useState<Aba>('Ficha');
   const [membro, setMembro] = useState<Membro | null>(null);
@@ -62,14 +62,14 @@ export function Perfil() {
   const [vacLote, setVacLote] = useState('');
 
   const carregarTudo = async () => {
-    if (!usuario || !id) return;
+    if (!familiaId || !id) return;
     setCarregando(true);
     try {
       const [m, meds, exs, vacs] = await Promise.all([
-        buscarMembro(usuario.uid, id),
-        listarMedicamentos(usuario.uid, id),
-        listarExames(usuario.uid, id),
-        listarVacinas(usuario.uid, id),
+        buscarMembro(familiaId, id),
+        listarMedicamentos(familiaId, id),
+        listarExames(familiaId, id),
+        listarVacinas(familiaId, id),
       ]);
 
       setMembro(m);
@@ -85,14 +85,14 @@ export function Perfil() {
 
   useEffect(() => {
     carregarTudo();
-  }, [usuario, id]);
+  }, [familiaId, id]);
 
   const handleSalvarMedicamento = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!usuario || !id || !medNome.trim()) return;
+    if (!familiaId || !id || !medNome.trim()) return;
     setSalvando(true);
     try {
-      await salvarMedicamento(usuario.uid, {
+      await salvarMedicamento(familiaId, {
         membro_id: id,
         nome: medNome.trim(),
         dose: medDose.trim() || undefined,
@@ -116,10 +116,10 @@ export function Perfil() {
 
   const handleSalvarExame = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!usuario || !id || !exMarcador.trim()) return;
+    if (!familiaId || !id || !exMarcador.trim()) return;
     setSalvando(true);
     try {
-      await salvarExame(usuario.uid, {
+      await salvarExame(familiaId, {
         membro_id: id,
         marcador: exMarcador.trim(),
         valor: exValor.trim(),
@@ -141,12 +141,12 @@ export function Perfil() {
   };
 
   const abrirModalVincularExame = async () => {
-    if (!usuario) return;
+    if (!familiaId) return;
     setModalTipo('vincular-exame');
     setExameSelecionadoId(null);
     setCarregandoExamesSemVinculo(true);
     try {
-      const todos = await listarExames(usuario.uid);
+      const todos = await listarExames(familiaId);
       setExamesSemVinculo(todos.filter((e) => !e.membro_id));
     } catch (err) {
       alert('Erro ao carregar exames sem vínculo: ' + (err as Error).message);
@@ -156,10 +156,10 @@ export function Perfil() {
   };
 
   const handleVincularExame = async () => {
-    if (!usuario || !id || !exameSelecionadoId) return;
+    if (!familiaId || !id || !exameSelecionadoId) return;
     setVinculando(true);
     try {
-      await salvarExame(usuario.uid, { id: exameSelecionadoId, membro_id: id });
+      await salvarExame(familiaId, { id: exameSelecionadoId, membro_id: id });
       setModalTipo(null);
       setExameSelecionadoId(null);
       await carregarTudo();
@@ -172,10 +172,10 @@ export function Perfil() {
 
   const handleSalvarVacina = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!usuario || !id || !vacNome.trim()) return;
+    if (!familiaId || !id || !vacNome.trim()) return;
     setSalvando(true);
     try {
-      await salvarVacina(usuario.uid, {
+      await salvarVacina(familiaId, {
         membro_id: id,
         nome: vacNome.trim(),
         aplicada_em: vacAplicadaEm || undefined,

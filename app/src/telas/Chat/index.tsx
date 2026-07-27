@@ -16,7 +16,7 @@ interface Mensagem {
 
 export function Chat() {
   const { config } = useConfiguracao();
-  const { usuario } = useAuth();
+  const { familiaId } = useAuth();
 
   const temChaveIA = Boolean(config.provedor_ia?.chave);
 
@@ -39,14 +39,14 @@ export function Chat() {
   // Carrega contexto da família do Firestore
   useEffect(() => {
     async function carregarContexto() {
-      if (!usuario) return;
+      if (!familiaId) return;
       try {
         const [membros, meds, exames, vacinas, eventos] = await Promise.all([
-          listarMembros(usuario.uid),
-          listarMedicamentos(usuario.uid),
-          listarExames(usuario.uid),
-          listarVacinas(usuario.uid),
-          listarEventos(usuario.uid),
+          listarMembros(familiaId),
+          listarMedicamentos(familiaId),
+          listarExames(familiaId),
+          listarVacinas(familiaId),
+          listarEventos(familiaId),
         ]);
 
         const linhas: string[] = [];
@@ -101,7 +101,7 @@ export function Chat() {
       }
     }
     carregarContexto();
-  }, [usuario]);
+  }, [familiaId]);
 
   useEffect(() => {
     fimRef.current?.scrollIntoView({ behavior: 'smooth' });
