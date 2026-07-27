@@ -1,5 +1,6 @@
 import { useParams, useSearchParams, NavLink } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Card, Badge, Botao, Carregando, EstadoVazio, Campo } from '../../core/ui';
 import {
   User, Dog, Cat, FileText, Pill, Activity,
@@ -589,11 +590,11 @@ export function Perfil() {
         </div>
       )}
 
-      {/* Modal — Visualizador de Documento */}
-      {docViewer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDocViewer(null)} />
-          <div className="relative w-full max-w-3xl max-h-[90dvh] flex flex-col rounded-[var(--radius-xl)] bg-fundo-card border border-borda shadow-2xl animate-slide-up">
+      {/* Modal — Visualizador de Documento (portal para evitar corte por overflow do layout pai) */}
+      {docViewer && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setDocViewer(null)} />
+          <div className="relative w-full max-w-3xl max-h-[90dvh] flex flex-col rounded-[var(--radius-lg)] bg-fundo-card border border-borda shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between px-4 py-3 border-b border-borda shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 <FileText size={18} className="text-salus-400 shrink-0" />
@@ -609,7 +610,8 @@ export function Perfil() {
               mimeType={docViewer.mime}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
