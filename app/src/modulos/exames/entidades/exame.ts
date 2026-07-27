@@ -12,4 +12,7 @@ export interface Exame {
   flag: FlagExame;
   documento_id?: string;
   criado_em: string;
+  atualizado_em?: string;
+  criado_por?: string;
+  atualizado_por?: string;
 }

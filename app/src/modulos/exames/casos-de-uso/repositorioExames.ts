@@ -27,6 +27,7 @@ export async function salvarExame(familiaId: string, exame: Partial<Exame> & { i
     ...exame,
     id,
     criado_em: exame.criado_em ?? agora,
+    atualizado_em: agora,
   }));
   await setDoc(docExame(familiaId, id), dados, { merge: true });
   return id;

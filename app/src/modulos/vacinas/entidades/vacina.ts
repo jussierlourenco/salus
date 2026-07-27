@@ -7,4 +7,5 @@ export interface Vacina {
   lote?: string;
   local?: string;
   criado_em: string;
+  criado_por?: string;
 }

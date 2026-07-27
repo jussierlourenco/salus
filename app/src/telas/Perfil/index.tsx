@@ -4,14 +4,15 @@ import { createPortal } from 'react-dom';
 import { Card, Badge, Botao, Carregando, EstadoVazio, Campo } from '../../core/ui';
 import {
   User, Dog, Cat, FileText, Pill, Activity,
-  ChevronLeft, Plus, Heart, X, RefreshCw, Link2, Eye, Download, FileWarning
+  ChevronLeft, Plus, Heart, X, RefreshCw, Link2, Eye, Download, FileWarning,
+  Pencil, Trash2, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { obterArquivoLocal } from '../../core/storage/indexedDB';
 import { buscarMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
-import { listarMedicamentos, salvarMedicamento } from '../../modulos/medicamentos/casos-de-uso/repositorioMedicamentos';
-import { listarExames, salvarExame } from '../../modulos/exames/casos-de-uso/repositorioExames';
-import { listarVacinas, salvarVacina } from '../../modulos/vacinas/casos-de-uso/repositorioVacinas';
+import { listarMedicamentos, salvarMedicamento, excluirMedicamento } from '../../modulos/medicamentos/casos-de-uso/repositorioMedicamentos';
+import { listarExames, salvarExame, excluirExame } from '../../modulos/exames/casos-de-uso/repositorioExames';
+import { listarVacinas, salvarVacina, excluirVacina } from '../../modulos/vacinas/casos-de-uso/repositorioVacinas';
 import type { Membro } from '../../modulos/membros/entidades/membro';
 import type { Medicamento, StatusMedicamento } from '../../modulos/medicamentos/entidades/medicamento';
 import type { Exame, FlagExame } from '../../modulos/exames/entidades/exame';
@@ -47,6 +48,15 @@ export function Perfil() {
 
   // Visualizador de documento
   const [docViewer, setDocViewer] = useState<{ storageId: string; nome: string; mime: string } | null>(null);
+
+  // Edição
+  const [editandoMed, setEditandoMed] = useState<Medicamento | null>(null);
+  const [editandoEx, setEditandoEx] = useState<Exame | null>(null);
+  const [editandoVac, setEditandoVac] = useState<Vacina | null>(null);
+
+  // Exclusão
+  const [excluirItem, setExcluirItem] = useState<{ tipo: 'med' | 'exame' | 'vacina'; id: string; nome: string } | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   // Form Medicamento
   const [medNome, setMedNome] = useState('');
@@ -100,19 +110,17 @@ export function Perfil() {
     setSalvando(true);
     try {
       await salvarMedicamento(familiaId, {
+        id: editandoMed?.id ?? undefined,
         membro_id: id,
         nome: medNome.trim(),
         dose: medDose.trim() || undefined,
         frequencia: medFreq.trim() || undefined,
         status: medStatus,
         renova_em: medRenovaEm || undefined,
+        ...(!editandoMed ? { criado_por: usuario?.uid } : { atualizado_por: usuario?.uid }),
       });
 
-      setMedNome('');
-      setMedDose('');
-      setMedFreq('');
-      setMedRenovaEm('');
-      setModalTipo(null);
+      fecharModal();
       await carregarTudo();
     } catch (err) {
       alert('Erro ao salvar medicamento: ' + (err as Error).message);
@@ -127,18 +135,17 @@ export function Perfil() {
     setSalvando(true);
     try {
       await salvarExame(familiaId, {
+        id: editandoEx?.id ?? undefined,
         membro_id: id,
         marcador: exMarcador.trim(),
         valor: exValor.trim(),
         unidade: exUnidade.trim() || undefined,
         flag: exFlag,
         data: exData || new Date().toISOString().split('T')[0],
+        ...(!editandoEx ? { criado_por: usuario?.uid } : { atualizado_por: usuario?.uid }),
       });
 
-      setExMarcador('');
-      setExValor('');
-      setExUnidade('');
-      setModalTipo(null);
+      fecharModal();
       await carregarTudo();
     } catch (err) {
       alert('Erro ao salvar exame: ' + (err as Error).message);
@@ -183,23 +190,84 @@ export function Perfil() {
     setSalvando(true);
     try {
       await salvarVacina(familiaId, {
+        id: editandoVac?.id ?? undefined,
         membro_id: id,
         nome: vacNome.trim(),
         aplicada_em: vacAplicadaEm || undefined,
         proxima_em: vacProximaEm || undefined,
         lote: vacLote.trim() || undefined,
+        ...(!editandoVac ? { criado_por: usuario?.uid } : undefined),
       });
 
-      setVacNome('');
-      setVacAplicadaEm('');
-      setVacProximaEm('');
-      setVacLote('');
-      setModalTipo(null);
+      fecharModal();
       await carregarTudo();
     } catch (err) {
       alert('Erro ao salvar vacina: ' + (err as Error).message);
     } finally {
       setSalvando(false);
+    }
+  };
+
+  const fecharModal = () => {
+    setModalTipo(null);
+    setEditandoMed(null);
+    setEditandoEx(null);
+    setEditandoVac(null);
+    setMedNome('');
+    setMedDose('');
+    setMedFreq('');
+    setMedRenovaEm('');
+    setExMarcador('');
+    setExValor('');
+    setExUnidade('');
+    setVacNome('');
+    setVacAplicadaEm('');
+    setVacProximaEm('');
+    setVacLote('');
+  };
+
+  const abrirEdicaoMed = (med: Medicamento) => {
+    setEditandoMed(med);
+    setMedNome(med.nome);
+    setMedDose(med.dose ?? '');
+    setMedFreq(med.frequencia ?? '');
+    setMedStatus(med.status);
+    setMedRenovaEm(med.renova_em ?? '');
+    setModalTipo('med');
+  };
+
+  const abrirEdicaoEx = (ex: Exame) => {
+    setEditandoEx(ex);
+    setExMarcador(ex.marcador);
+    setExValor(ex.valor);
+    setExUnidade(ex.unidade ?? '');
+    setExFlag(ex.flag);
+    setExData(ex.data);
+    setModalTipo('exame');
+  };
+
+  const abrirEdicaoVac = (vac: Vacina) => {
+    setEditandoVac(vac);
+    setVacNome(vac.nome);
+    setVacAplicadaEm(vac.aplicada_em ?? '');
+    setVacProximaEm(vac.proxima_em ?? '');
+    setVacLote(vac.lote ?? '');
+    setModalTipo('vacina');
+  };
+
+  const handleExcluir = async () => {
+    if (!familiaId || !excluirItem) return;
+    setExcluindo(true);
+    try {
+      if (excluirItem.tipo === 'med') await excluirMedicamento(familiaId, excluirItem.id);
+      else if (excluirItem.tipo === 'exame') await excluirExame(familiaId, excluirItem.id);
+      else if (excluirItem.tipo === 'vacina') await excluirVacina(familiaId, excluirItem.id);
+      setExcluirItem(null);
+      await carregarTudo();
+    } catch (err) {
+      alert('Erro ao excluir: ' + (err as Error).message);
+    } finally {
+      setExcluindo(false);
     }
   };
 
@@ -319,15 +387,28 @@ export function Perfil() {
           ) : (
             <div className="space-y-2.5">
               {medicamentos.map((med) => (
-                <div key={med.id} className="p-3.5 rounded-[var(--radius-md)] bg-fundo-elevado/40 border border-borda/60 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-texto">{med.nome}</span>
-                      {med.dose && <span className="text-xs text-texto-secundario font-medium">({med.dose})</span>}
-                      <Badge variante={med.status === 'em_uso' ? 'salus' : 'neutro'}>{med.status}</Badge>
+                <div key={med.id} className="p-3.5 rounded-[var(--radius-md)] bg-fundo-elevado/40 border border-borda/60">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold text-texto">{med.nome}</span>
+                        {med.dose && <span className="text-xs text-texto-secundario font-medium">({med.dose})</span>}
+                        <Badge variante={med.status === 'em_uso' ? 'salus' : 'neutro'}>{med.status}</Badge>
+                      </div>
+                      {med.frequencia && <p className="text-xs text-texto-secundario">Posologia: {med.frequencia}</p>}
+                      {med.renova_em && <p className="text-xs text-alerta-400 mt-0.5">Renovar receita em: {med.renova_em}</p>}
+                      {med.criado_por && (
+                        <p className="text-[10px] text-texto-secundario/50 mt-1">Criado por {med.criado_por === usuario?.uid ? 'você' : med.criado_por.slice(0, 8)}</p>
+                      )}
                     </div>
-                    {med.frequencia && <p className="text-xs text-texto-secundario">Posologia: {med.frequencia}</p>}
-                    {med.renova_em && <p className="text-xs text-alerta-400 mt-0.5">Renovar receita em: {med.renova_em}</p>}
+                    <div className="flex items-center gap-1 ml-3 shrink-0">
+                      <button onClick={() => abrirEdicaoMed(med)} className="text-texto-secundario hover:text-salus-400 p-1.5 rounded-[var(--radius-sm)] hover:bg-fundo-elevado transition-colors" title="Editar">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => setExcluirItem({ tipo: 'med', id: med.id, nome: med.nome })} className="text-texto-secundario hover:text-vencido-500 p-1.5 rounded-[var(--radius-sm)] hover:bg-fundo-elevado transition-colors" title="Excluir">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -359,31 +440,43 @@ export function Perfil() {
           ) : (
             <div className="space-y-2.5">
               {exames.map((ex) => (
-                <div key={ex.id} className="p-3.5 rounded-[var(--radius-md)] bg-fundo-elevado/40 border border-borda/60 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-texto">{ex.marcador}:</span>
-                      <span className="text-sm font-bold text-salus-400">{ex.valor} {ex.unidade}</span>
-                      <Badge variante={ex.flag === 'normal' ? 'salus' : 'alerta'}>{ex.flag}</Badge>
+                <div key={ex.id} className="p-3.5 rounded-[var(--radius-md)] bg-fundo-elevado/40 border border-borda/60">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold text-texto">{ex.marcador}:</span>
+                        <span className="text-sm font-bold text-salus-400">{ex.valor} {ex.unidade}</span>
+                        <Badge variante={ex.flag === 'normal' ? 'salus' : 'alerta'}>{ex.flag}</Badge>
+                      </div>
+                      <p className="text-xs text-texto-secundario">Data do exame: {ex.data}</p>
+                      {ex.criado_por && (
+                        <p className="text-[10px] text-texto-secundario/50 mt-0.5">Criado por {ex.criado_por === usuario?.uid ? 'você' : ex.criado_por.slice(0, 8)}</p>
+                      )}
                     </div>
-                    <p className="text-xs text-texto-secundario">Data do exame: {ex.data}</p>
+                    <div className="flex items-center gap-1 ml-3 shrink-0">
+                      {ex.documento_id && (
+                        <button
+                          onClick={async () => {
+                            if (!usuario) return;
+                            const reg = await obterArquivoLocal(usuario.uid, ex.documento_id!);
+                            if (reg) {
+                              setDocViewer({ storageId: ex.documento_id!, nome: reg.registro.nome, mime: reg.registro.mime });
+                            }
+                          }}
+                          className="text-texto-secundario hover:text-salus-400 p-1.5 rounded-[var(--radius-sm)] hover:bg-fundo-elevado transition-colors"
+                          title="Ver documento original"
+                        >
+                          <Eye size={14} />
+                        </button>
+                      )}
+                      <button onClick={() => abrirEdicaoEx(ex)} className="text-texto-secundario hover:text-salus-400 p-1.5 rounded-[var(--radius-sm)] hover:bg-fundo-elevado transition-colors" title="Editar">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => setExcluirItem({ tipo: 'exame', id: ex.id, nome: ex.marcador })} className="text-texto-secundario hover:text-vencido-500 p-1.5 rounded-[var(--radius-sm)] hover:bg-fundo-elevado transition-colors" title="Excluir">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                  {ex.documento_id && (
-                    <button
-                      onClick={async () => {
-                        if (!usuario) return;
-                        const reg = await obterArquivoLocal(usuario.uid, ex.documento_id!);
-                        if (reg) {
-                          setDocViewer({ storageId: ex.documento_id!, nome: reg.registro.nome, mime: reg.registro.mime });
-                        }
-                      }}
-                      className="flex items-center gap-1.5 text-xs font-medium text-texto-secundario hover:text-salus-400 px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-fundo-elevado transition-colors shrink-0"
-                      title="Ver documento original"
-                    >
-                      <Eye size={14} />
-                      Documento
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
@@ -409,14 +502,27 @@ export function Perfil() {
           ) : (
             <div className="space-y-2.5">
               {vacinas.map((vac) => (
-                <div key={vac.id} className="p-3.5 rounded-[var(--radius-md)] bg-fundo-elevado/40 border border-borda/60 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-texto">{vac.nome}</span>
-                      {vac.lote && <span className="text-xs text-texto-secundario">Lote: {vac.lote}</span>}
+                <div key={vac.id} className="p-3.5 rounded-[var(--radius-md)] bg-fundo-elevado/40 border border-borda/60">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold text-texto">{vac.nome}</span>
+                        {vac.lote && <span className="text-xs text-texto-secundario">Lote: {vac.lote}</span>}
+                      </div>
+                      {vac.aplicada_em && <p className="text-xs text-texto-secundario">Aplicada em: {vac.aplicada_em}</p>}
+                      {vac.proxima_em && <p className="text-xs text-alerta-400 mt-0.5">Próxima dose: {vac.proxima_em}</p>}
+                      {vac.criado_por && (
+                        <p className="text-[10px] text-texto-secundario/50 mt-0.5">Criado por {vac.criado_por === usuario?.uid ? 'você' : vac.criado_por.slice(0, 8)}</p>
+                      )}
                     </div>
-                    {vac.aplicada_em && <p className="text-xs text-texto-secundario">Aplicada em: {vac.aplicada_em}</p>}
-                    {vac.proxima_em && <p className="text-xs text-alerta-400 mt-0.5">Próxima dose: {vac.proxima_em}</p>}
+                    <div className="flex items-center gap-1 ml-3 shrink-0">
+                      <button onClick={() => abrirEdicaoVac(vac)} className="text-texto-secundario hover:text-salus-400 p-1.5 rounded-[var(--radius-sm)] hover:bg-fundo-elevado transition-colors" title="Editar">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => setExcluirItem({ tipo: 'vacina', id: vac.id, nome: vac.nome })} className="text-texto-secundario hover:text-vencido-500 p-1.5 rounded-[var(--radius-sm)] hover:bg-fundo-elevado transition-colors" title="Excluir">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -432,9 +538,9 @@ export function Perfil() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-texto flex items-center gap-2">
                 <Pill size={20} className="text-salus-400" />
-                Adicionar Medicamento no Banco
+                {editandoMed ? 'Editar Medicamento' : 'Adicionar Medicamento'}
               </h3>
-              <button onClick={() => setModalTipo(null)} className="text-texto-secundario hover:text-texto"><X size={18} /></button>
+              <button onClick={fecharModal} className="text-texto-secundario hover:text-texto"><X size={18} /></button>
             </div>
             <form onSubmit={handleSalvarMedicamento} className="space-y-3">
               <Campo label="Nome do Medicamento *" value={medNome} onChange={(e) => setMedNome(e.target.value)} placeholder="ex: Losartana, Dipirona" required />
@@ -452,7 +558,7 @@ export function Perfil() {
               <Campo label="Posologia / Frequência" value={medFreq} onChange={(e) => setMedFreq(e.target.value)} placeholder="ex: 1x ao dia pela manhã" />
               <Campo label="Data para Renovar Receita" type="date" value={medRenovaEm} onChange={(e) => setMedRenovaEm(e.target.value)} />
               <div className="flex justify-end gap-2 pt-2 border-t border-borda">
-                <Botao variante="secundario" tamanho="sm" type="button" onClick={() => setModalTipo(null)}>Cancelar</Botao>
+                <Botao variante="secundario" tamanho="sm" type="button" onClick={fecharModal}>Cancelar</Botao>
                 <Botao tamanho="sm" type="submit" disabled={salvando || !medNome.trim()} icone={salvando ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}>
                   {salvando ? 'Salvar...' : 'Salvar no Firestore'}
                 </Botao>
@@ -469,9 +575,9 @@ export function Perfil() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-texto flex items-center gap-2">
                 <Activity size={20} className="text-salus-400" />
-                Adicionar Exame no Banco
+                {editandoEx ? 'Editar Exame' : 'Adicionar Exame'}
               </h3>
-              <button onClick={() => setModalTipo(null)} className="text-texto-secundario hover:text-texto"><X size={18} /></button>
+              <button onClick={fecharModal} className="text-texto-secundario hover:text-texto"><X size={18} /></button>
             </div>
             <form onSubmit={handleSalvarExame} className="space-y-3">
               <Campo label="Marcador / Exame *" value={exMarcador} onChange={(e) => setExMarcador(e.target.value)} placeholder="ex: Glicemia, Colesterol Total" required />
@@ -491,7 +597,7 @@ export function Perfil() {
                 <Campo label="Data do Exame" type="date" value={exData} onChange={(e) => setExData(e.target.value)} />
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-borda">
-                <Botao variante="secundario" tamanho="sm" type="button" onClick={() => setModalTipo(null)}>Cancelar</Botao>
+                <Botao variante="secundario" tamanho="sm" type="button" onClick={fecharModal}>Cancelar</Botao>
                 <Botao tamanho="sm" type="submit" disabled={salvando || !exMarcador.trim()} icone={salvando ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}>
                   {salvando ? 'Salvar...' : 'Salvar no Firestore'}
                 </Botao>
@@ -510,7 +616,7 @@ export function Perfil() {
                 <Link2 size={20} className="text-salus-400" />
                 Vincular Exame Existente
               </h3>
-              <button onClick={() => setModalTipo(null)} className="text-texto-secundario hover:text-texto"><X size={18} /></button>
+              <button onClick={fecharModal} className="text-texto-secundario hover:text-texto"><X size={18} /></button>
             </div>
 
             <p className="text-sm text-texto-secundario">
@@ -568,9 +674,9 @@ export function Perfil() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-texto flex items-center gap-2">
                 <Heart size={20} className="text-salus-400" />
-                Adicionar Vacina no Banco
+                {editandoVac ? 'Editar Vacina' : 'Adicionar Vacina'}
               </h3>
-              <button onClick={() => setModalTipo(null)} className="text-texto-secundario hover:text-texto"><X size={18} /></button>
+              <button onClick={fecharModal} className="text-texto-secundario hover:text-texto"><X size={18} /></button>
             </div>
             <form onSubmit={handleSalvarVacina} className="space-y-3">
               <Campo label="Nome da Vacina *" value={vacNome} onChange={(e) => setVacNome(e.target.value)} placeholder="ex: Influenza, Covid, V8" required />
@@ -580,7 +686,7 @@ export function Perfil() {
               </div>
               <Campo label="Lote / Observação" value={vacLote} onChange={(e) => setVacLote(e.target.value)} placeholder="ex: Lote 2026-AB" />
               <div className="flex justify-end gap-2 pt-2 border-t border-borda">
-                <Botao variante="secundario" tamanho="sm" type="button" onClick={() => setModalTipo(null)}>Cancelar</Botao>
+                <Botao variante="secundario" tamanho="sm" type="button" onClick={fecharModal}>Cancelar</Botao>
                 <Botao tamanho="sm" type="submit" disabled={salvando || !vacNome.trim()} icone={salvando ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}>
                   {salvando ? 'Salvar...' : 'Salvar no Firestore'}
                 </Botao>
@@ -609,6 +715,45 @@ export function Perfil() {
               nomeArquivo={docViewer.nome}
               mimeType={docViewer.mime}
             />
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal — Confirmar Exclusão */}
+      {excluirItem && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setExcluirItem(null)} />
+          <div className="relative bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-sm w-full shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-texto flex items-center gap-2">
+                <AlertTriangle size={20} className="text-vencido-500" />
+                Excluir {excluirItem.tipo === 'med' ? 'Medicamento' : excluirItem.tipo === 'exame' ? 'Exame' : 'Vacina'}
+              </h3>
+              <button onClick={() => setExcluirItem(null)} className="text-texto-secundario hover:text-texto p-2 -mr-2">
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-texto-secundario">
+              Tem certeza que deseja excluir <strong className="text-texto">{excluirItem.nome}</strong>? Esta ação não pode ser desfeita.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-borda">
+              <Botao variante="secundario" tamanho="sm" type="button" onClick={() => setExcluirItem(null)}>
+                Cancelar
+              </Botao>
+              <Botao
+                variante="perigo"
+                tamanho="sm"
+                type="button"
+                disabled={excluindo}
+                onClick={handleExcluir}
+                icone={excluindo ? <RefreshCw size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              >
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </Botao>
+            </div>
           </div>
         </div>,
         document.body

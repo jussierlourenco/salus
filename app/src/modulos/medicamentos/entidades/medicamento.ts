@@ -13,4 +13,6 @@ export interface Medicamento {
   motivo?: string;
   criado_em: string;
   atualizado_em: string;
+  criado_por?: string;
+  atualizado_por?: string;
 }
