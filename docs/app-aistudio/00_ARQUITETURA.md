@@ -130,21 +130,23 @@ Este é um princípio de produto (regra 9 do Núcleo, em `01_SYSTEM_INSTRUCTIONS
 
 ## 4. Modelo de dados (o `_index.yaml` virando schema multi-tenant)
 
-O `Familia/_index.yaml` já era um schema disfarçado de YAML. No app ele vira TypeScript + coleções do Firestore, **sempre aninhadas sob o `uid` do usuário logado**. Nomes de campo **preservados em português**, iguais ao framework, para o export/import ser trivial.
+O `Familia/_index.yaml` já era um schema disfarçado de YAML. No app ele vira TypeScript + coleções do Firestore, **aninhadas sob `/familias/{familiaId}`** com suporte a compartilhamento entre usuários via `membros_uids` e `compartilhado_com_uids`. Nomes de campo **preservados em português**, iguais ao framework, para o export/import ser trivial.
 
+**Schema atual (implementado em app/src):**
 ```
-/usuarios/{uid}/perfil/config              ← doc singleton: consentimentos, provedor_ia { tipo, url_base?, modelo, chave },
-                                               drive_refresh_token, drive_pasta_raiz_id, ultima_revisao, proxima_revisao, ultimo_export
-/usuarios/{uid}/familia/dados              ← doc singleton: nome, atualizado_em
-/usuarios/{uid}/membros/{membroId}
-/usuarios/{uid}/medicamentos/{id}
-/usuarios/{uid}/vacinas/{id}
-/usuarios/{uid}/checkups/{id}
-/usuarios/{uid}/exames/{id}
-/usuarios/{uid}/eventos/{id}
-/usuarios/{uid}/analises/{id}
-/usuarios/{uid}/caixaEntrada/{id}          ← metadados; o arquivo em si vive no Google Drive do usuário
+/familias/{familiaId}/config               ← doc singleton: onboarding_concluido, consentimentos, etc
+/familias/{familiaId}/membros/{membroId}   ← inclui campo compartilhado_com_uids para acesso compartilhado
+/familias/{familiaId}/medicamentos/{id}
+/familias/{familiaId}/vacinas/{id}
+/familias/{familiaId}/eventos/{id}
+/familias/{familiaId}/exames/{id}
+/familias/{familiaId}/caixa_entrada/{id}   ← metadados; o arquivo em si vive no Google Drive do usuário
 ```
+
+**Migração legada**: usuários com dados antigos em `/usuarios/{uid}/...` são automaticamente migrados para `/familias/{familiaId}` via `migrarDadosLegados()` em `repositorioFamilias.ts`. O acesso é centralizado: `garantirFamiliaDoUsuario(uid)` cria ou recupera a família daquele usuário. Collection-group queries permitem descoberta de membros compartilhados entre famílias.
+
+**Onde ficam os arquivos:** não há coleção de Storage. Cada arquivo vive no Google Drive do próprio usuário, numa pasta raiz "Salus App" (id salvo em `config`), com subpastas espelhando `Perfis/[Nome]/Documentos/{Exames,Laudos,Receitas,Requisicoes,Audios}/` — a mesma árvore do framework original.
+
 
 **Onde ficam os arquivos:** não há coleção de Storage. Cada arquivo vive no Google Drive do próprio usuário, numa pasta raiz "Salus App" (id salvo em `drive_pasta_raiz_id`), com subpastas espelhando `Perfis/[Nome]/Documentos/{Exames,Laudos,Receitas,Requisicoes,Audios}/` — a mesma árvore do framework original, o que faz da pasta do Drive, por si só, uma cópia sempre atualizada e legível dos documentos, sem esforço extra.
 
@@ -194,11 +196,15 @@ match /usuarios/{uid}/{documento=**} {
 
 **Fora do MVP (v2):** `cruzar` com gráficos de evolução, `preparar-consulta` com PDF imprimível, `salus-revisao` periódica, árvore genealógica visual, PWA offline, acesso compartilhado por família (mais de uma conta vendo os mesmos dados).
 
-### Componente que define o produto: `<PainelDeProposta>`
+### Componente que define o produto: `<PainelDeProposta>` — **v2 Backlog**
 
-Toda saída da IA que toca em dados vira um objeto `Proposta` — nunca uma gravação direta. O painel mostra, por campo: **valor atual → valor novo**, com botões `Confirmar` · `Editar` · `Descartar`. Só `Confirmar` chama o repositório.
+⚠️ **STATUS**: Componente criado em `core/ui/PainelDeProposta.tsx` mas **não integrado em nenhuma tela** (auditoria 2026-07-26). A Caixa de Entrada ainda não dispara o fluxo upload→extração→proposta→aplicação.
 
-Isso não é detalhe de UI: é a tradução literal da premissa "o Salus nunca grava sem perguntar". Se esse componente não existir, o app não é o Salus.
+**Premissa original**: Toda saída da IA que toca em dados vira um objeto `Proposta` — nunca uma gravação direta. O painel mostra, por campo: **valor atual → valor novo**, com botões `Confirmar` · `Editar` · `Descartar`. Só `Confirmar` chama o repositório.
+
+Isso não é detalhe de UI: é a tradução literal de "o Salus nunca grava sem perguntar". Quando implementado, será crítico para confiabilidade. Deixado para v2 para priorizar BYOK + schema-migration en esta rodada.
+
+**Para implementar (v2)**: conectar `CaixaDeEntrada` → `PainelDeProposta` → `aplicarProposta()`.
 
 ### Linguagem visual
 

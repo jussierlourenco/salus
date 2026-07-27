@@ -1,0 +1,68 @@
+{
+  "forbidden": [
+    {
+      "name": "telas-cannot-import-cross-module-repos",
+      "comment": "Telas só importam de core/, modulos/*/entidades, ou modulos/*/casos-de-uso/repositorio (próprio módulo). Importar direto de outro módulo's repositorio viola ocultação.",
+      "severity": "error",
+      "from": {
+        "path": "^telas"
+      },
+      "to": {
+        "path": "^modulos/(?!telas)[^/]+/casos-de-uso/repositorio",
+        "pathNot": "^modulos/[^/]+/casos-de-uso/repositorio"
+      }
+    },
+    {
+      "name": "no-circular-dependencies",
+      "comment": "Ciclos quebram modularidade; use camada de facade (repositorio.ts) se precisar.",
+      "severity": "error",
+      "type": "modularity",
+      "from": {},
+      "to": {
+        "circular": true
+      }
+    },
+    {
+      "name": "dominio-no-side-effects",
+      "comment": "Regras de negócio devem ser puras — sem Firebase, localStorage, rede. Use em adapters.",
+      "severity": "warn",
+      "from": {
+        "path": "^dominio"
+      },
+      "to": {
+        "path": "^(core|servicos)",
+        "pathNot": "^types"
+      }
+    }
+  ],
+  "options": {
+    "doNotFollow": {
+      "path": "node_modules"
+    },
+    "exclude": {
+      "path": "(node_modules|dist|build)"
+    },
+    "modules": [
+      {
+        "name": "core",
+        "from": "core"
+      },
+      {
+        "name": "dominio",
+        "from": "dominio"
+      },
+      {
+        "name": "modulos",
+        "from": "modulos"
+      },
+      {
+        "name": "telas",
+        "from": "telas"
+      },
+      {
+        "name": "types",
+        "from": "types"
+      }
+    ]
+  }
+}
