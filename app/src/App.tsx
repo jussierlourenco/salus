@@ -15,6 +15,7 @@ import { Ajustes } from './telas/Ajustes';
 import { AguardandoAprovacao } from './telas/AguardandoAprovacao';
 import { AdminUsuarios } from './telas/AdminUsuarios';
 import { ConsentimentoLGPD } from './telas/ConsentimentoLGPD';
+import { Tutorial } from './telas/Tutorial';
 
 const VERSAO_CONSENTIMENTO = 1;
 
@@ -84,6 +85,7 @@ export default function App() {
               <Route path="caixa-de-entrada" element={<CaixaDeEntrada />} />
               <Route path="chat" element={<Chat />} />
               <Route path="ajustes" element={<Ajustes />} />
+              <Route path="tutorial" element={<Tutorial />} />
               <Route path="admin/usuarios" element={<AdminUsuarios />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

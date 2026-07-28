@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Inbox,
@@ -54,8 +54,10 @@ function NavItem({ to, label, icone: Icone, contagem }: typeof links[number] & {
 export function AppShell() {
   const { usuario, usuarioSalus, sair } = useAuth();
   const { tema, alternarTema } = useTema();
+  const { pathname } = useLocation();
   const isAdmin = usuarioSalus?.admin === true;
   const alertas = useAlertas();
+  const estaNoTutorial = pathname === '/tutorial';
 
   const adminLink = { to: '/admin/usuarios', label: 'Admin', icone: Shield, badge: undefined };
 
@@ -83,10 +85,8 @@ export function AppShell() {
         </nav>
 
         <div className="space-y-1">
-          <a
-            href="/tutorial-salus.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to="/tutorial"
             aria-label="Abrir tutorial do Salus"
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-[var(--radius-md)] touch-target
                        text-sm font-medium text-texto-secundario hover:text-texto hover:bg-fundo-elevado/50
@@ -94,7 +94,7 @@ export function AppShell() {
           >
             <CircleHelp size={20} />
             <span className="hidden lg:inline">Como funciona?</span>
-          </a>
+          </Link>
           <button
             onClick={alternarTema}
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-[var(--radius-md)] touch-target
@@ -145,18 +145,18 @@ export function AppShell() {
         {/* Content */}
         <main className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 overflow-y-auto relative">
-            <a
-              href="/tutorial-salus.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Abrir tutorial do Salus"
-              title="Como funciona o Salus?"
-              className="lg:hidden absolute top-3 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center
-                         bg-fundo-card border border-borda text-texto-secundario shadow-sm
-                         active:text-salus-400 active:border-salus-600/40 touch-target"
-            >
-              <CircleHelp size={21} />
-            </a>
+            {!estaNoTutorial && (
+              <Link
+                to="/tutorial"
+                aria-label="Abrir tutorial do Salus"
+                title="Como funciona o Salus?"
+                className="lg:hidden absolute top-3 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center
+                           bg-fundo-card border border-borda text-texto-secundario shadow-sm
+                           active:text-salus-400 active:border-salus-600/40 touch-target"
+              >
+                <CircleHelp size={21} />
+              </Link>
+            )}
             <Outlet />
           </div>
         </main>

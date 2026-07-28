@@ -193,6 +193,7 @@ match /usuarios/{uid}/{documento=**} {
 | 4 | **Perfil do membro** | abas Ficha · Medicamentos · Exames · Histórico · Documentos | os arquivos de `Perfis/[Nome]/` |
 | 5 | **Chat** | perguntar em linguagem natural, com propostas de registro inline | `registrar` + consulta geral |
 | 6 | **Ajustes** | **escolher provedor de IA e cadastrar a própria chave** (opcional), exportar/importar `.zip`, privacidade, apagar conta | — |
+| 7 | **Tutorial** | explicar visualmente o funcionamento do app em uma rota HTML interna (`/tutorial`); páginas otimizadas e pré-armazenadas pelo PWA | — |
 
 **Fora do MVP (v2):** `cruzar` com gráficos de evolução, `preparar-consulta` com PDF imprimível, `salus-revisao` periódica, árvore genealógica visual, PWA offline, acesso compartilhado por família (mais de uma conta vendo os mesmos dados).
 
