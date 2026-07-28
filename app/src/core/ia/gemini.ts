@@ -116,7 +116,7 @@ Você deve extrair informações clínicas e retornar EXATAMENTE um JSON no segu
     { "nome_medicamento": "string", "apresentacao": "string", "quantidade": 1, "valor_unitario": 0.0, "valor_total": 0.0, "moeda": "BRL", "comprado_em": "YYYY-MM-DD", "estabelecimento": "string" }
   ],
   "exames": [
-    { "marcador": "string", "valor": "string", "unidade": "string", "flag": "normal" | "alto" | "baixo" }
+    { "marcador": "string", "valor": "string", "unidade": "string", "data": "YYYY-MM-DD", "flag": "normal" | "alto" | "baixo" }
   ],
   "vacinas": [
     { "nome": "string", "aplicada_em": "YYYY-MM-DD", "proxima_em": "YYYY-MM-DD" }
@@ -127,7 +127,7 @@ Você deve extrair informações clínicas e retornar EXATAMENTE um JSON no segu
   "notas": "Resumo clínico das descobertas",
   "markdown_gerado": "Markdown formatado com os dados para salvar na ficha"
 }
-Em notas e cupons de compra, extraia cada medicamento em precos_medicamentos. Não trate a compra como prescrição nem altere o status clínico do medicamento. Valores devem ser números em reais, sem "R$". Se houver desconto, use os valores efetivamente pagos.
+Para exames, use a data real do evento/coleta/liberação encontrada no documento (priorize a data de coleta); converta DD/MM/AAAA para YYYY-MM-DD. Nunca use a data atual como substituta. Em notas e cupons de compra, extraia cada medicamento em precos_medicamentos. Não trate a compra como prescrição nem altere o status clínico do medicamento. Valores devem ser números em reais, sem "R$". Se houver desconto, use os valores efetivamente pagos.
 Retorne APENAS o JSON válido sem blocos de código adicionais fora de json.`;
 
     const payload = {

@@ -39,4 +39,12 @@ describe('validarPropostaIA', () => {
     expect(resultado.precos_medicamentos?.[0].valor_total).toBe(17);
     expect(resultado.precos_medicamentos?.[0].moeda).toBe('BRL');
   });
+
+  it('preserva a data real do exame extraída do documento', () => {
+    const resultado = validarPropostaIA(JSON.stringify({
+      tipo_documento: 'exame',
+      exames: [{ marcador: 'TSH neonatal', valor: '< 1,3', data: '2019-03-21' }],
+    }));
+    expect(resultado.exames?.[0].data).toBe('2019-03-21');
+  });
 });

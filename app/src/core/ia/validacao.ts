@@ -23,6 +23,7 @@ export const EsquemaPrecoMedicamento = z.object({
 export const EsquemaExame = z.object({
   marcador: z.string(),
   valor: z.string(),
+  data: z.string().optional(),
   unidade: z.string().optional(),
   flag: z.enum(['normal', 'alto', 'baixo', 'nao_informado']).optional().default('nao_informado'),
   faixa_referencia_laudo: z.string().optional(),

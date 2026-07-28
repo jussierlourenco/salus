@@ -419,10 +419,13 @@ export function CaixaDeEntrada() {
           itens.find((i) => i.id === `ex-${proposta.id}-${idx}`)?.aceito
         ) ?? [];
         for (const ex of exsAceitos) {
+          if (!ex.data) {
+            throw new Error(`o exame "${ex.marcador ?? 'sem marcador'}" não tem data identificada; revise o documento e informe a data antes de salvar`);
+          }
           await salvarExame(familiaDestinoId, {
             ...ex,
             membro_id: membroId ?? ex.membro_id,
-            data: ex.data ?? new Date().toISOString().split('T')[0],
+            data: ex.data,
             documento_id: arquivoId,
           });
           salvos++;

@@ -31,6 +31,7 @@ export class ProvedorOpenAICompat implements ProvedorIA {
 Contexto: ${contexto}
 
 Retorne um JSON com a estrutura PropostaExtracao (medicamentos, precos_medicamentos, exames, vacinas, eventos, notas, markdown_gerado).
+Para exames, inclua a data real da coleta/evento no campo data em YYYY-MM-DD; nunca use a data atual como substituta.
 Em nota/cupom de compra, classifique como tipo_documento "nota_compra_medicamento" e extraia cada item em precos_medicamentos com nome_medicamento, apresentacao, quantidade, valor_unitario, valor_total, moeda "BRL", comprado_em e estabelecimento. Uma compra não é prescrição e não deve criar ou alterar medicamento clínico.`;
 
     const payload = {
