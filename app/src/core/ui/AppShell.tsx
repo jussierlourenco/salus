@@ -58,9 +58,6 @@ export function AppShell() {
   const alertas = useAlertas();
 
   const adminLink = { to: '/admin/usuarios', label: 'Admin', icone: Shield, badge: undefined };
-  const abrirTutorial = () => {
-    window.open('/tutorial-salus.pdf', '_blank', 'noopener,noreferrer');
-  };
 
   return (
     <div className="flex flex-col lg:flex-row h-dvh">
@@ -86,8 +83,10 @@ export function AppShell() {
         </nav>
 
         <div className="space-y-1">
-          <button
-            onClick={abrirTutorial}
+          <a
+            href="/tutorial-salus.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
             aria-label="Abrir tutorial do Salus"
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-[var(--radius-md)] touch-target
                        text-sm font-medium text-texto-secundario hover:text-texto hover:bg-fundo-elevado/50
@@ -95,7 +94,7 @@ export function AppShell() {
           >
             <CircleHelp size={20} />
             <span className="hidden lg:inline">Como funciona?</span>
-          </button>
+          </a>
           <button
             onClick={alternarTema}
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-[var(--radius-md)] touch-target
@@ -146,8 +145,10 @@ export function AppShell() {
         {/* Content */}
         <main className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 overflow-y-auto relative">
-            <button
-              onClick={abrirTutorial}
+            <a
+              href="/tutorial-salus.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
               aria-label="Abrir tutorial do Salus"
               title="Como funciona o Salus?"
               className="lg:hidden absolute top-3 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center
@@ -155,7 +156,7 @@ export function AppShell() {
                          active:text-salus-400 active:border-salus-600/40 touch-target"
             >
               <CircleHelp size={21} />
-            </button>
+            </a>
             <Outlet />
           </div>
         </main>
