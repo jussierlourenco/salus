@@ -37,7 +37,7 @@ export function Tutorial() {
                 src={`/tutorial/pagina-${numero}.jpg`}
                 alt={`Tutorial do Salus — página ${pagina} de ${TOTAL_DE_PAGINAS}`}
                 width={1376}
-                height={768}
+                height={744}
                 loading={pagina <= 2 ? 'eager' : 'lazy'}
                 decoding="async"
                 className="block w-full h-auto"
