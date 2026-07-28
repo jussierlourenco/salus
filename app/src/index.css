@@ -86,6 +86,16 @@ body {
   }
 }
 
+.pwa-only-mobile {
+  display: none;
+}
+
+@media (display-mode: standalone) and (max-width: 1023px) {
+  .pwa-only-mobile {
+    display: flex;
+  }
+}
+
 /* ── Safe area utilities ── */
 @supports (padding: env(safe-area-inset-bottom)) {
   .safe-inset-bottom {

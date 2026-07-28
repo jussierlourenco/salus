@@ -145,18 +145,31 @@ export function AppShell() {
         {/* Content */}
         <main className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 overflow-y-auto relative">
-            {!estaNoTutorial && (
-              <Link
-                to="/tutorial"
-                aria-label="Abrir tutorial do Salus"
-                title="Como funciona o Salus?"
-                className="lg:hidden absolute top-3 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center
+            <div className="absolute top-3 right-4 z-10 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={sair}
+                aria-label="Sair do Salus"
+                title="Sair"
+                className="pwa-only-mobile w-10 h-10 rounded-full items-center justify-center
                            bg-fundo-card border border-borda text-texto-secundario shadow-sm
-                           active:text-salus-400 active:border-salus-600/40 touch-target"
+                           active:text-vencido-500 active:border-vencido-500/40 touch-target"
               >
-                <CircleHelp size={21} />
-              </Link>
-            )}
+                <LogOut size={20} />
+              </button>
+              {!estaNoTutorial && (
+                <Link
+                  to="/tutorial"
+                  aria-label="Abrir tutorial do Salus"
+                  title="Como funciona o Salus?"
+                  className="lg:hidden w-10 h-10 rounded-full flex items-center justify-center
+                             bg-fundo-card border border-borda text-texto-secundario shadow-sm
+                             active:text-salus-400 active:border-salus-600/40 touch-target"
+                >
+                  <CircleHelp size={21} />
+                </Link>
+              )}
+            </div>
             <Outlet />
           </div>
         </main>
