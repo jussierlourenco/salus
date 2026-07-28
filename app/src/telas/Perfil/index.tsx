@@ -44,6 +44,7 @@ export function Perfil() {
   const [exames, setExames] = useState<Exame[]>([]);
   const [vacinas, setVacinas] = useState<Vacina[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [erroMembro, setErroMembro] = useState<'nao_encontrado' | 'sem_acesso' | null>(null);
 
   // Modais de Adição
   const [modalTipo, setModalTipo] = useState<'med' | 'exame' | 'vacina' | 'vincular-exame' | null>(null);
@@ -90,22 +91,39 @@ export function Perfil() {
   const carregarTudo = async () => {
     if (!familiaId || !id) return;
     setCarregando(true);
+    setErroMembro(null);
     try {
-      const [m, meds, precos, exs, vacs] = await Promise.all([
-        buscarMembro(familiaId, id),
+      // O perfil é o recurso principal. Uma coleção auxiliar indisponível
+      // nunca deve produzir um falso "membro não encontrado".
+      const m = await buscarMembro(familiaId, id);
+      if (!m) {
+        setMembro(null);
+        setErroMembro('nao_encontrado');
+        return;
+      }
+      setMembro(m);
+
+      const [meds, precos, exs, vacs] = await Promise.allSettled([
         listarMedicamentos(familiaId, id),
         listarPrecosMedicamento(familiaId, id),
         listarExames(familiaId, id),
         listarVacinas(familiaId, id),
       ]);
 
-      setMembro(m);
-      setMedicamentos(meds);
-      setPrecosMedicamentos(precos);
-      setExames(exs);
-      setVacinas(vacs);
+      setMedicamentos(meds.status === 'fulfilled' ? meds.value : []);
+      setPrecosMedicamentos(precos.status === 'fulfilled' ? precos.value : []);
+      setExames(exs.status === 'fulfilled' ? exs.value : []);
+      setVacinas(vacs.status === 'fulfilled' ? vacs.value : []);
+
+      for (const resultado of [meds, precos, exs, vacs]) {
+        if (resultado.status === 'rejected') {
+          console.warn('[Perfil] Recurso auxiliar indisponível:', resultado.reason);
+        }
+      }
     } catch (err) {
       console.error('[Perfil] Erro ao carregar dados do membro:', err);
+      setMembro(null);
+      setErroMembro('sem_acesso');
     } finally {
       setCarregando(false);
     }
@@ -290,8 +308,10 @@ export function Perfil() {
     return (
       <EstadoVazio
         icone={<User size={48} />}
-        titulo="Membro não encontrado"
-        descricao="Este membro não existe ou foi removido do seu banco de dados."
+        titulo={erroMembro === 'sem_acesso' ? 'Não foi possível acessar o membro' : 'Membro não encontrado'}
+        descricao={erroMembro === 'sem_acesso'
+          ? 'O vínculo pode continuar ativo, mas a consulta foi recusada ou não pôde ser concluída. Atualize a página; se persistir, confira as regras publicadas do Firestore.'
+          : 'Este membro não existe ou foi removido do seu banco de dados.'}
         acao={
           <NavLink to="/membros">
             <Botao variante="secundario">Voltar para Membros</Botao>

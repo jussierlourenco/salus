@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore';
+import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../../../core/database/firebase';
 import type { PrecoMedicamento } from '../entidades/precoMedicamento';
 
@@ -13,10 +13,11 @@ export async function listarPrecosMedicamento(
   const consulta = query(
     colecaoPrecos(familiaId),
     where('membro_id', '==', membroId),
-    orderBy('comprado_em', 'desc'),
   );
   const snap = await getDocs(consulta);
-  return snap.docs.map((item) => ({ id: item.id, ...item.data() }) as PrecoMedicamento);
+  return snap.docs
+    .map((item) => ({ id: item.id, ...item.data() }) as PrecoMedicamento)
+    .sort((a, b) => b.comprado_em.localeCompare(a.comprado_em));
 }
 
 /**
