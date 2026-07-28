@@ -10,6 +10,7 @@ import {
   Sun,
   Moon,
   Shield,
+  CircleHelp,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useTema } from './useTema';
@@ -57,6 +58,9 @@ export function AppShell() {
   const alertas = useAlertas();
 
   const adminLink = { to: '/admin/usuarios', label: 'Admin', icone: Shield, badge: undefined };
+  const abrirTutorial = () => {
+    window.open('/tutorial-salus.pdf', '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="flex flex-col lg:flex-row h-dvh">
@@ -81,16 +85,27 @@ export function AppShell() {
           {isAdmin && <NavItem key={adminLink.to} {...adminLink} />}
         </nav>
 
-        {/* Tema */}
-        <button
-          onClick={alternarTema}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] touch-target
-                     text-sm font-medium text-texto-secundario hover:text-texto hover:bg-fundo-elevado/50
-                     border border-transparent transition-all duration-200"
-        >
-          {tema === 'escuro' ? <Sun size={20} /> : <Moon size={20} />}
-          <span className="hidden lg:inline">{tema === 'escuro' ? 'Modo claro' : 'Modo escuro'}</span>
-        </button>
+        <div className="space-y-1">
+          <button
+            onClick={abrirTutorial}
+            aria-label="Abrir tutorial do Salus"
+            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-[var(--radius-md)] touch-target
+                       text-sm font-medium text-texto-secundario hover:text-texto hover:bg-fundo-elevado/50
+                       border border-transparent transition-all duration-200"
+          >
+            <CircleHelp size={20} />
+            <span className="hidden lg:inline">Como funciona?</span>
+          </button>
+          <button
+            onClick={alternarTema}
+            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-[var(--radius-md)] touch-target
+                       text-sm font-medium text-texto-secundario hover:text-texto hover:bg-fundo-elevado/50
+                       border border-transparent transition-all duration-200"
+          >
+            {tema === 'escuro' ? <Sun size={20} /> : <Moon size={20} />}
+            <span className="hidden lg:inline">{tema === 'escuro' ? 'Modo claro' : 'Modo escuro'}</span>
+          </button>
+        </div>
 
         {/* User */}
         <div className="border-t border-borda pt-4 mt-4">
@@ -130,7 +145,17 @@ export function AppShell() {
       <div className="flex flex-col flex-1 min-h-0">
         {/* Content */}
         <main className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 overflow-y-auto">
+          <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 overflow-y-auto relative">
+            <button
+              onClick={abrirTutorial}
+              aria-label="Abrir tutorial do Salus"
+              title="Como funciona o Salus?"
+              className="lg:hidden absolute top-3 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center
+                         bg-fundo-card border border-borda text-texto-secundario shadow-sm
+                         active:text-salus-400 active:border-salus-600/40 touch-target"
+            >
+              <CircleHelp size={21} />
+            </button>
             <Outlet />
           </div>
         </main>
