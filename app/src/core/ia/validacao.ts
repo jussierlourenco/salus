@@ -9,6 +9,17 @@ export const EsquemaMedicamento = z.object({
   motivo: z.string().optional(),
 });
 
+export const EsquemaPrecoMedicamento = z.object({
+  nome_medicamento: z.string(),
+  apresentacao: z.string().optional(),
+  quantidade: z.coerce.number().positive().default(1),
+  valor_unitario: z.coerce.number().nonnegative(),
+  valor_total: z.coerce.number().nonnegative(),
+  moeda: z.literal('BRL').default('BRL'),
+  comprado_em: z.string(),
+  estabelecimento: z.string().optional(),
+});
+
 export const EsquemaExame = z.object({
   marcador: z.string(),
   valor: z.string(),
@@ -34,6 +45,7 @@ export const EsquemaPropostaExtracao = z.object({
   membro_id: z.string().optional(),
   tipo_documento: z.string().optional(),
   medicamentos: z.array(EsquemaMedicamento).optional(),
+  precos_medicamentos: z.array(EsquemaPrecoMedicamento).optional(),
   exames: z.array(EsquemaExame).optional(),
   vacinas: z.array(EsquemaVacina).optional(),
   eventos: z.array(EsquemaEvento).optional(),

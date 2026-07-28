@@ -6,6 +6,14 @@
       "fields": [
         { "fieldPath": "compartilhado_com_uids", "arrayConfig": "CONTAINS" }
       ]
+    },
+    {
+      "collectionGroup": "precos_medicamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "membro_id", "order": "ASCENDING" },
+        { "fieldPath": "comprado_em", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

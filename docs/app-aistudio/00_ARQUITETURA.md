@@ -137,6 +137,7 @@ O `Familia/_index.yaml` já era um schema disfarçado de YAML. No app ele vira T
 /familias/{familiaId}/config               ← doc singleton: onboarding_concluido, consentimentos, etc
 /familias/{familiaId}/membros/{membroId}   ← inclui campo compartilhado_com_uids para acesso compartilhado
 /familias/{familiaId}/medicamentos/{id}
+/familias/{familiaId}/precos_medicamentos/{id} ← observações financeiras append-only extraídas de notas
 /familias/{familiaId}/vacinas/{id}
 /familias/{familiaId}/eventos/{id}
 /familias/{familiaId}/exames/{id}
@@ -145,30 +146,20 @@ O `Familia/_index.yaml` já era um schema disfarçado de YAML. No app ele vira T
 
 **Migração legada**: usuários com dados antigos em `/usuarios/{uid}/...` são automaticamente migrados para `/familias/{familiaId}` via `migrarDadosLegados()` em `repositorioFamilias.ts`. O acesso é centralizado: `garantirFamiliaDoUsuario(uid)` cria ou recupera a família daquele usuário. Collection-group queries permitem descoberta de membros compartilhados entre famílias.
 
-**Onde ficam os arquivos:** não há coleção de Storage. Cada arquivo vive no Google Drive do próprio usuário, numa pasta raiz "Salus App" (id salvo em `config`), com subpastas espelhando `Perfis/[Nome]/Documentos/{Exames,Laudos,Receitas,Requisicoes,Audios}/` — a mesma árvore do framework original.
+**Onde ficam os arquivos:** o runtime atual guarda o binário no IndexedDB do navegador de quem enviou; o Firestore recebe apenas metadados, `storage_owner_uid` e os dados extraídos. Em documentos de membros compartilhados, todos os autorizados veem o registro estruturado, mas o original permanece disponível somente ao remetente até a integração de armazenamento remoto compartilhável.
 
-
-**Onde ficam os arquivos:** não há coleção de Storage. Cada arquivo vive no Google Drive do próprio usuário, numa pasta raiz "Salus App" (id salvo em `drive_pasta_raiz_id`), com subpastas espelhando `Perfis/[Nome]/Documentos/{Exames,Laudos,Receitas,Requisicoes,Audios}/` — a mesma árvore do framework original, o que faz da pasta do Drive, por si só, uma cópia sempre atualizada e legível dos documentos, sem esforço extra.
-
-**Regra de segurança do Firestore (obrigatória, testada em P0 e reauditada em P12):**
-
-```
-match /usuarios/{uid}/{documento=**} {
-  allow read, write: if request.auth != null && request.auth.uid == uid;
-}
-```
-
-**Nenhuma coleção fica fora deste padrão** — não existe coleção "global" ou "compartilhada" no MVP.
+**Regra de segurança do Firestore:** membros da família têm acesso às subcoleções. Um convidado listado em `compartilhado_com_uids` acessa somente registros cujo `membro_id` aponte para aquele membro. Em `caixa_entrada`, o convidado só cria documentos com seu próprio `criado_por_uid` e só atualiza documentos que ele criou. O histórico de preços é append-only: clientes podem criar observações válidas, mas não atualizar nem excluir registros.
 
 | Coleção | Campos principais |
 |---|---|
 | `membros` | `nome`, `tipo` (`pessoa`\|`cao`\|`gato`\|`outro`), `nascimento`, `vinculo` (`biologico`\|`adotivo`\|`enteado`), `condicoes_ativas[]`, `alergias[]`, `tipo_sanguineo`, `relacoes[]` |
 | `medicamentos` | `membro_id`, `nome`, `dose`, `frequencia`, `status` (`em_uso`\|`prescrito`\|`descontinuado`), `desde`, `renova_em`, `prescrito_por` |
+| `precos_medicamentos` | `membro_id`, `medicamento_id?`, `nome_medicamento`, `apresentacao`, `quantidade`, `valor_unitario`, `valor_total`, `moeda`, `comprado_em`, `estabelecimento`, `documento_id`, `criado_por_uid` |
 | `vacinas` | `membro_id`, `nome`, `aplicada_em`, `proxima_em` |
 | `checkups` | `membro_id`, `tipo`, `data` |
 | `exames` | `membro_id`, `data`, `painel`, `marcador`, `valor`, `unidade`, `faixa_referencia_laudo`, `flag` (`normal`\|`alto`\|`baixo`\|`nao_informado`), `documento_id` |
 | `eventos` | `membro_id`, `data`, `tipo`, `descricao` |
-| `caixaEntrada` | `nome_arquivo`, `mime`, `drive_file_id`, `status`, `proposta` |
+| `caixa_entrada` | `nome_arquivo`, `mime_type`, `status`, `membro_id`, `criado_por_uid`, `storage_owner_uid`, `storage_id`, `storage_tipo`, `proposta` |
 | `analises` | `membro_id`, `titulo`, `criado_em`, `tipo`, `fontes[]`, `dados[]`, `conclusao` |
 | `perfil/config` | `onboarding_concluido`, `consentimentos`, `provedor_ia` (objeto, só o dono lê — ver abaixo), `drive_refresh_token` (string, só o dono lê), `drive_pasta_raiz_id`, `ultima_revisao`, `proxima_revisao`, `ultimo_export` |
 

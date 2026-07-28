@@ -51,6 +51,24 @@ export interface Medicamento {
   atualizado_em: string;
 }
 
+/** Observação imutável de preço obtida de nota/cupom de compra. */
+export interface PrecoMedicamento {
+  id: string;
+  membro_id: string;
+  medicamento_id?: string;
+  nome_medicamento: string;
+  apresentacao?: string;
+  quantidade: number;
+  valor_unitario: number;
+  valor_total: number;
+  moeda: 'BRL';
+  comprado_em: string; // AAAA-MM-DD
+  estabelecimento?: string;
+  documento_id?: string;
+  criado_em: string;
+  criado_por_uid: string;
+}
+
 export interface Vacina {
   id: string;
   membro_id: string;
@@ -104,6 +122,8 @@ export interface CaixaEntradaItem {
   drive_file_id?: string;
   status: StatusCaixaEntrada;
   membro_id?: string;
+  criado_por_uid?: string;
+  storage_owner_uid?: string;
   tipo_documento?: string; // 'exame' | 'laudo' | 'receita' | 'requisicao' | 'audio' | 'outro'
   proposta?: PropostaExtracao;
   storage_id?: string;
@@ -117,6 +137,7 @@ export interface PropostaExtracao {
   membro_id?: string;
   tipo_documento?: string;
   medicamentos?: Partial<Medicamento>[];
+  precos_medicamentos?: Partial<PrecoMedicamento>[];
   exames?: Partial<Exame>[];
   vacinas?: Partial<Vacina>[];
   eventos?: Partial<Evento>[];

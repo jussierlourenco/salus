@@ -5,6 +5,16 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Adicionado
+- **Documentos de membros compartilhados**: a Caixa de Entrada lista membros compartilhados e grava metadados e dados extraídos na família de origem, com autorização granular por `membro_id` e autoria do envio.
+- **Histórico de valores de medicamentos**: notas e cupons geram observações financeiras imutáveis, separadas do tratamento clínico, com data, apresentação, quantidade, valores efetivamente pagos, estabelecimento e documento de origem. O histórico aparece na aba Medicamentos do perfil.
+
+### Segurança
+- Registros de preço são append-only no Firestore. Convidados só podem inserir documentos e preços para membros explicitamente compartilhados; não recebem acesso ao restante da família.
+- O arquivo original local continua acessível apenas no navegador do remetente e essa propriedade é registrada em `storage_owner_uid`.
+
 ## [0.3.0] - 2026-07-23
 
 ### Adicionado

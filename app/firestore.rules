@@ -69,6 +69,30 @@ service cloud.firestore {
       );
     }
 
+    // HISTÓRICO DE PREÇOS — append-only e com o mesmo escopo do membro
+    match /familias/{familiaId}/precos_medicamentos/{id} {
+      allow read: if isSignedIn() && (
+        isFamiliaMember(familiaId) ||
+        (resource.data.keys().hasAll(['membro_id']) &&
+         isMembroShared(familiaId, resource.data.membro_id))
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.keys().hasAll([
+          'membro_id', 'nome_medicamento', 'quantidade', 'valor_unitario',
+          'valor_total', 'moeda', 'comprado_em', 'criado_por_uid'
+        ]) &&
+        request.resource.data.criado_por_uid == request.auth.uid &&
+        request.resource.data.moeda == 'BRL' &&
+        request.resource.data.quantidade > 0 &&
+        request.resource.data.valor_unitario >= 0 &&
+        request.resource.data.valor_total >= 0 &&
+        (
+          isFamiliaMember(familiaId) ||
+          isMembroShared(familiaId, request.resource.data.membro_id)
+        );
+      allow update, delete: if false;
+    }
+
     // EXAMES
     match /familias/{familiaId}/exames/{id} {
       allow read: if isSignedIn() && (
@@ -126,9 +150,25 @@ service cloud.firestore {
       );
     }
 
-    // CAIXA DE ENTRADA — apenas membros da família (sem membro_id para granularidade)
+    // CAIXA DE ENTRADA — convidados só registram documentos do membro compartilhado
     match /familias/{familiaId}/caixa_entrada/{id} {
-      allow read, write: if isFamiliaMember(familiaId);
+      allow read: if isFamiliaMember(familiaId) || (
+        resource.data.keys().hasAll(['membro_id']) &&
+        isMembroShared(familiaId, resource.data.membro_id)
+      );
+      allow create: if isFamiliaMember(familiaId) || (
+        request.resource.data.keys().hasAll(['membro_id', 'criado_por_uid']) &&
+        request.resource.data.criado_por_uid == request.auth.uid &&
+        isMembroShared(familiaId, request.resource.data.membro_id)
+      );
+      allow update: if isFamiliaMember(familiaId) || (
+        resource.data.keys().hasAll(['membro_id', 'criado_por_uid']) &&
+        resource.data.criado_por_uid == request.auth.uid &&
+        request.resource.data.membro_id == resource.data.membro_id &&
+        request.resource.data.criado_por_uid == resource.data.criado_por_uid &&
+        isMembroShared(familiaId, resource.data.membro_id)
+      );
+      allow delete: if false;
     }
 
     // CONFIG — apenas membros da família

@@ -2,6 +2,7 @@ import type { Medicamento } from '../../medicamentos/entidades/medicamento';
 import type { Exame } from '../../exames/entidades/exame';
 import type { Vacina } from '../../vacinas/entidades/vacina';
 import type { Evento } from '../../eventos/entidades/evento';
+import type { PrecoMedicamento } from '../../../types/dominio';
 
 export type StatusCaixaEntrada = 'pendente' | 'processando' | 'proposta_pronta' | 'confirmado' | 'descartado';
 
@@ -9,6 +10,7 @@ export interface PropostaExtracao {
   membro_id?: string;
   tipo_documento?: string;
   medicamentos?: Partial<Medicamento>[];
+  precos_medicamentos?: Partial<PrecoMedicamento>[];
   exames?: Partial<Exame>[];
   vacinas?: Partial<Vacina>[];
   eventos?: Partial<Evento>[];
@@ -23,6 +25,9 @@ export interface CaixaEntradaItem {
   mime_type: string;
   status: StatusCaixaEntrada;
   proposta?: PropostaExtracao;
+  membro_id?: string;
+  criado_por_uid?: string;
+  storage_owner_uid?: string;
   /** ID do arquivo no IndexedDB local (storage local no navegador). */
   storage_id?: string;
   /** 'indexeddb' | 'drive' | 'manual' */

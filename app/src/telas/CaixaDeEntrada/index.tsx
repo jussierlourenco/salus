@@ -8,8 +8,9 @@ import {
 import { useAuth } from '../../core/auth/AuthProvider';
 import { useConfiguracao } from '../../core/config/ConfigContext';
 import { criarProvedor } from '../../core/ia/interface';
-import { listarMembros } from '../../modulos/membros/casos-de-uso/repositorioMembros';
+import { listarMembros, listarMembrosCompartilhados } from '../../modulos/membros/casos-de-uso/repositorioMembros';
 import { salvarMedicamento } from '../../modulos/medicamentos/casos-de-uso/repositorioMedicamentos';
+import { registrarPrecoMedicamento } from '../../modulos/medicamentos/casos-de-uso/repositorioPrecosMedicamentos';
 import { salvarExame } from '../../modulos/exames/casos-de-uso/repositorioExames';
 import { salvarVacina } from '../../modulos/vacinas/casos-de-uso/repositorioVacinas';
 import { salvarEvento } from '../../core/database/repositorio';
@@ -31,10 +32,29 @@ interface PropostaArquivo {
 
 interface ItemSelecao {
   id: string;
-  grupo: 'medicamento' | 'exame' | 'vacina' | 'evento';
+  grupo: 'medicamento' | 'preco' | 'exame' | 'vacina' | 'evento';
   resumo: string;
   detalhe: string;
   aceito: boolean;
+}
+
+type MembroSelecionavel = Membro & {
+  familia_origem_id: string;
+  compartilhado?: boolean;
+};
+
+function referenciaMembro(membro: MembroSelecionavel): string {
+  return `${membro.familia_origem_id}::${membro.id}`;
+}
+
+function decomporReferenciaMembro(
+  referencia: string,
+  familiaPadrao: string,
+): { familiaId: string; membroId: string } {
+  const [familiaId, membroId] = referencia.split('::');
+  return membroId
+    ? { familiaId, membroId }
+    : { familiaId: familiaPadrao, membroId: referencia };
 }
 
 // ── Helpers de exibição (escopo módulo) ──
@@ -49,6 +69,7 @@ type IconeComponente = ComponentType<{ size?: number; className?: string }>;
 
 const corGrupo: Record<string, { icone: IconeComponente; cor: string; bg: string }> = {
   medicamento: { icone: Pill, cor: 'text-alerta-400', bg: 'bg-alerta-600/10' },
+  preco: { icone: Pill, cor: 'text-emerald-400', bg: 'bg-emerald-600/10' },
   exame: { icone: Activity, cor: 'text-salus-400', bg: 'bg-salus-600/10' },
   vacina: { icone: Heart, cor: 'text-purple-400', bg: 'bg-purple-600/10' },
   evento: { icone: Calendar, cor: 'text-amber-400', bg: 'bg-amber-600/10' },
@@ -56,6 +77,7 @@ const corGrupo: Record<string, { icone: IconeComponente; cor: string; bg: string
 
 const labelGrupo: Record<string, string> = {
   medicamento: 'Medicamentos',
+  preco: 'Preços de compra',
   exame: 'Exames',
   vacina: 'Vacinas',
   evento: 'Eventos',
@@ -114,20 +136,27 @@ export function CaixaDeEntrada() {
   const [firestoreDocIds, setFirestoreDocIds] = useState<Record<string, string>>({});
 
   // Dados auxiliares
-  const [membros, setMembros] = useState<Membro[]>([]);
+  const [membros, setMembros] = useState<MembroSelecionavel[]>([]);
   const [contextoFamilia, setContextoFamilia] = useState('');
 
   useEffect(() => {
     if (!familiaId) return;
-    listarMembros(familiaId).then((lista) => {
+    if (!usuario) return;
+    Promise.all([listarMembros(familiaId), listarMembrosCompartilhados(usuario.uid)]).then(([proprios, compartilhados]) => {
+      const lista: MembroSelecionavel[] = [
+        ...proprios.map((m) => ({ ...m, familia_origem_id: familiaId })),
+        ...compartilhados
+          .filter((m) => m.familia_origem_id !== familiaId)
+          .map((m) => ({ ...m, compartilhado: true })),
+      ];
       setMembros(lista);
       setContextoFamilia(
         lista
-          .map((m) => `id:${m.id} = ${m.nome} (${m.tipo})`)
+          .map((m) => `id:${referenciaMembro(m)} = ${m.nome} (${m.tipo}${m.compartilhado ? ', compartilhado' : ''})`)
           .join('; ')
       );
     });
-  }, [familiaId]);
+  }, [familiaId, usuario]);
 
   // ── Upload handlers ──
 
@@ -252,6 +281,13 @@ export function CaixaDeEntrada() {
           detalhe: [m.dose, m.frequencia].filter(Boolean).join(' · '),
           aceito: true,
         })),
+        ...(r.proposta.precos_medicamentos ?? []).map((preco, idx) => ({
+          id: `preco-${r.id}-${idx}`,
+          grupo: 'preco' as const,
+          resumo: preco.nome_medicamento ?? 'Preço de medicamento',
+          detalhe: `${preco.quantidade ?? 1} un. · R$ ${Number(preco.valor_total ?? 0).toFixed(2)}`,
+          aceito: true,
+        })),
         ...(r.proposta.exames ?? []).map((e, idx) => ({
           id: `ex-${r.id}-${idx}`,
           grupo: 'exame' as const,
@@ -284,12 +320,14 @@ export function CaixaDeEntrada() {
 
   const resolverMembro = (membroRef?: string): string | undefined => {
     if (!membroRef) return undefined;
+    const porReferencia = membros.find((m) => referenciaMembro(m) === membroRef);
+    if (porReferencia) return referenciaMembro(porReferencia);
     const porId = membros.find((m) => m.id === membroRef);
-    if (porId) return porId.id;
+    if (porId) return referenciaMembro(porId);
     const porNome = membros.find(
       (m) => m.nome.toLowerCase() === membroRef.toLowerCase()
     );
-    return porNome?.id;
+    return porNome ? referenciaMembro(porNome) : undefined;
   };
 
   // ── Interação com a proposta ──
@@ -324,17 +362,22 @@ export function CaixaDeEntrada() {
     if (!familiaId || !usuario) return;
     setEtapa('salvando');
 
-    const uid = familiaId;
     let salvos = 0;
     const erros: string[] = [];
 
     for (const proposta of propostas) {
       if (!proposta.ok) continue;
 
-      const membroId = membroPorProposta[proposta.id];
+      const membroRef = membroPorProposta[proposta.id];
       const itens = itensSelecao.get(proposta.id) ?? [];
 
       try {
+        if (!membroRef && itens.some((item) => item.aceito)) {
+          throw new Error('selecione o membro ao qual o documento pertence');
+        }
+        const destino = decomporReferenciaMembro(membroRef, familiaId);
+        const familiaDestinoId = destino.familiaId;
+        const membroId = destino.membroId;
         const arquivoId = `ce_${proposta.id}`;
 
         // Medicamentos
@@ -342,10 +385,31 @@ export function CaixaDeEntrada() {
           itens.find((i) => i.id === `med-${proposta.id}-${idx}`)?.aceito
         ) ?? [];
         for (const med of medsAceitos) {
-          await salvarMedicamento(uid, {
+          await salvarMedicamento(familiaDestinoId, {
             ...med,
             membro_id: membroId ?? med.membro_id,
             status: 'prescrito' as const,
+          });
+          salvos++;
+        }
+
+        // Histórico financeiro (append-only; compra não altera tratamento)
+        const precosAceitos = proposta.proposta.precos_medicamentos?.filter((_, idx) =>
+          itens.find((i) => i.id === `preco-${proposta.id}-${idx}`)?.aceito
+        ) ?? [];
+        for (const preco of precosAceitos) {
+          await registrarPrecoMedicamento(familiaDestinoId, {
+            nome_medicamento: preco.nome_medicamento!,
+            apresentacao: preco.apresentacao,
+            quantidade: preco.quantidade ?? 1,
+            valor_unitario: preco.valor_unitario ?? preco.valor_total ?? 0,
+            valor_total: preco.valor_total ?? preco.valor_unitario ?? 0,
+            moeda: 'BRL',
+            comprado_em: preco.comprado_em ?? new Date().toISOString().split('T')[0],
+            estabelecimento: preco.estabelecimento,
+            membro_id: membroId,
+            documento_id: arquivoId,
+            criado_por_uid: usuario.uid,
           });
           salvos++;
         }
@@ -355,7 +419,7 @@ export function CaixaDeEntrada() {
           itens.find((i) => i.id === `ex-${proposta.id}-${idx}`)?.aceito
         ) ?? [];
         for (const ex of exsAceitos) {
-          await salvarExame(uid, {
+          await salvarExame(familiaDestinoId, {
             ...ex,
             membro_id: membroId ?? ex.membro_id,
             data: ex.data ?? new Date().toISOString().split('T')[0],
@@ -369,7 +433,7 @@ export function CaixaDeEntrada() {
           itens.find((i) => i.id === `vac-${proposta.id}-${idx}`)?.aceito
         ) ?? [];
         for (const vac of vacsAceitas) {
-          await salvarVacina(uid, {
+          await salvarVacina(familiaDestinoId, {
             ...vac,
             membro_id: membroId ?? vac.membro_id,
           });
@@ -381,7 +445,7 @@ export function CaixaDeEntrada() {
           itens.find((i) => i.id === `evt-${proposta.id}-${idx}`)?.aceito
         ) ?? [];
         for (const ev of evtsAceitos) {
-          await salvarEvento(uid, {
+          await salvarEvento(familiaDestinoId, {
             ...ev,
             membro_id: membroId ?? ev.membro_id,
             data: ev.data ?? new Date().toISOString().split('T')[0],
@@ -409,25 +473,26 @@ export function CaixaDeEntrada() {
 
         // Atualiza o item existente no Firestore (criado como 'processando')
         const fsId = firestoreDocIds[proposta.id];
-        if (fsId) {
-          await atualizarCaixaEntrada(uid, fsId, {
+        const dadosDocumento = {
             status: 'confirmado',
             proposta: proposta.proposta,
+            membro_id: membroId,
+            criado_por_uid: usuario.uid,
+            storage_owner_uid: usuario.uid,
             storage_id: arquivoId,
             storage_tipo: 'indexeddb',
             data_evento: dataEvento,
-          });
+          } as const;
+        if (fsId && familiaDestinoId === familiaId) {
+          await atualizarCaixaEntrada(familiaDestinoId, fsId, dadosDocumento);
         } else {
-          // Fallback: cria um novo item (caso o pré-save tenha falhado)
-          await salvarCaixaEntrada(uid, {
+          await salvarCaixaEntrada(familiaDestinoId, {
             nome_arquivo: proposta.arquivo.name,
             mime_type: proposta.arquivo.type,
-            status: 'confirmado',
-            proposta: proposta.proposta,
-            storage_id: arquivoId,
-            storage_tipo: 'indexeddb',
-            data_evento: dataEvento,
+            ...dadosDocumento,
           });
+          // O item transitório pertence à caixa do remetente e não deve virar duplicata.
+          if (fsId) await atualizarCaixaEntrada(familiaId, fsId, { status: 'descartado' });
         }
       } catch (err) {
         erros.push(`${proposta.arquivo.name}: ${err instanceof Error ? err.message : 'Erro ao salvar'}`);
@@ -664,7 +729,7 @@ export function CaixaDeEntrada() {
 
 interface PropostaCardProps {
   proposta: PropostaArquivo;
-  membros: Membro[];
+  membros: MembroSelecionavel[];
   membroSelecionado: string;
   itens: ItemSelecao[];
   onAlternarItem: (itemId: string) => void;
@@ -705,7 +770,7 @@ function PropostaCard({
     );
   }
 
-  const grupos = ['medicamento', 'exame', 'vacina', 'evento'] as const;
+  const grupos = ['medicamento', 'preco', 'exame', 'vacina', 'evento'] as const;
   const totalItens = itens.length;
   const aceitos = itens.filter((i) => i.aceito).length;
 
@@ -740,8 +805,8 @@ function PropostaCard({
             >
               <option value="">Selecione um membro da família</option>
               {membros.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nome} ({m.tipo === 'pessoa' ? 'Pessoa' : m.tipo})
+                <option key={referenciaMembro(m)} value={referenciaMembro(m)}>
+                  {m.nome} ({m.tipo === 'pessoa' ? 'Pessoa' : m.tipo}){m.compartilhado ? ' — compartilhado' : ''}
                 </option>
               ))}
             </select>

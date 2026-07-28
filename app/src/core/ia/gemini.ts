@@ -107,10 +107,13 @@ Contexto da família: ${contexto}
 
 Você deve extrair informações clínicas e retornar EXATAMENTE um JSON no seguinte formato:
 {
-  "tipo_documento": "exame" | "receita" | "vacina" | "laudo" | "outro",
+  "tipo_documento": "exame" | "receita" | "vacina" | "laudo" | "nota_compra_medicamento" | "outro",
   "membro_id": "string se identificável no contexto",
   "medicamentos": [
     { "nome": "string", "dose": "string", "frequencia": "string", "motivo": "string" }
+  ],
+  "precos_medicamentos": [
+    { "nome_medicamento": "string", "apresentacao": "string", "quantidade": 1, "valor_unitario": 0.0, "valor_total": 0.0, "moeda": "BRL", "comprado_em": "YYYY-MM-DD", "estabelecimento": "string" }
   ],
   "exames": [
     { "marcador": "string", "valor": "string", "unidade": "string", "flag": "normal" | "alto" | "baixo" }
@@ -124,6 +127,7 @@ Você deve extrair informações clínicas e retornar EXATAMENTE um JSON no segu
   "notas": "Resumo clínico das descobertas",
   "markdown_gerado": "Markdown formatado com os dados para salvar na ficha"
 }
+Em notas e cupons de compra, extraia cada medicamento em precos_medicamentos. Não trate a compra como prescrição nem altere o status clínico do medicamento. Valores devem ser números em reais, sem "R$". Se houver desconto, use os valores efetivamente pagos.
 Retorne APENAS o JSON válido sem blocos de código adicionais fora de json.`;
 
     const payload = {

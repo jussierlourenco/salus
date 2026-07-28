@@ -11,10 +11,12 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { obterArquivoLocal } from '../../core/storage/indexedDB';
 import { buscarMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
 import { listarMedicamentos, salvarMedicamento, excluirMedicamento } from '../../modulos/medicamentos/casos-de-uso/repositorioMedicamentos';
+import { listarPrecosMedicamento } from '../../modulos/medicamentos/casos-de-uso/repositorioPrecosMedicamentos';
 import { listarExames, salvarExame, excluirExame } from '../../modulos/exames/casos-de-uso/repositorioExames';
 import { listarVacinas, salvarVacina, excluirVacina } from '../../modulos/vacinas/casos-de-uso/repositorioVacinas';
 import type { Membro } from '../../modulos/membros/entidades/membro';
 import type { Medicamento, StatusMedicamento } from '../../modulos/medicamentos/entidades/medicamento';
+import type { PrecoMedicamento } from '../../modulos/medicamentos/entidades/precoMedicamento';
 import type { Exame, FlagExame } from '../../modulos/exames/entidades/exame';
 import type { Vacina } from '../../modulos/vacinas/entidades/vacina';
 import { AbaDiario } from './AbaDiario';
@@ -23,6 +25,11 @@ const abas = ['Ficha', 'Medicamentos', 'Exames', 'Vacinas', 'Diário'] as const;
 type Aba = typeof abas[number];
 
 const iconeMembro = { pessoa: User, cao: Dog, gato: Cat, outro: User };
+
+function fmtData(data: string): string {
+  const [ano, mes, dia] = data.split('T')[0].split('-');
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : data;
+}
 
 export function Perfil() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +40,7 @@ export function Perfil() {
   const [abaAtiva, setAbaAtiva] = useState<Aba>('Ficha');
   const [membro, setMembro] = useState<Membro | null>(null);
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
+  const [precosMedicamentos, setPrecosMedicamentos] = useState<PrecoMedicamento[]>([]);
   const [exames, setExames] = useState<Exame[]>([]);
   const [vacinas, setVacinas] = useState<Vacina[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -83,15 +91,17 @@ export function Perfil() {
     if (!familiaId || !id) return;
     setCarregando(true);
     try {
-      const [m, meds, exs, vacs] = await Promise.all([
+      const [m, meds, precos, exs, vacs] = await Promise.all([
         buscarMembro(familiaId, id),
         listarMedicamentos(familiaId, id),
+        listarPrecosMedicamento(familiaId, id),
         listarExames(familiaId, id),
         listarVacinas(familiaId, id),
       ]);
 
       setMembro(m);
       setMedicamentos(meds);
+      setPrecosMedicamentos(precos);
       setExames(exs);
       setVacinas(vacs);
     } catch (err) {
@@ -446,6 +456,47 @@ export function Perfil() {
               ))}
             </div>
           )}
+
+          <div className="mt-6 pt-5 border-t border-borda">
+            <h3 className="text-sm font-semibold text-texto mb-3">
+              Histórico de valores ({precosMedicamentos.length})
+            </h3>
+            {precosMedicamentos.length === 0 ? (
+              <p className="text-sm text-texto-secundario">
+                Envie uma nota ou cupom de medicamento pela Caixa de Entrada para iniciar o histórico.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-xs text-texto-secundario">
+                    <tr>
+                      <th className="pb-2">Data</th>
+                      <th className="pb-2">Medicamento</th>
+                      <th className="pb-2">Estabelecimento</th>
+                      <th className="pb-2 text-right">Qtd.</th>
+                      <th className="pb-2 text-right">Unitário</th>
+                      <th className="pb-2 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {precosMedicamentos.map((preco) => (
+                      <tr key={preco.id} className="border-t border-borda/60">
+                        <td className="py-2">{fmtData(preco.comprado_em)}</td>
+                        <td className="py-2">
+                          <span className="font-medium text-texto">{preco.nome_medicamento}</span>
+                          {preco.apresentacao && <span className="block text-xs text-texto-secundario">{preco.apresentacao}</span>}
+                        </td>
+                        <td className="py-2 text-texto-secundario">{preco.estabelecimento ?? '—'}</td>
+                        <td className="py-2 text-right">{preco.quantidade}</td>
+                        <td className="py-2 text-right">{preco.valor_unitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td className="py-2 text-right font-medium text-texto">{preco.valor_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </Card>
       )}
 

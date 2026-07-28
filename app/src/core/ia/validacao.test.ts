@@ -21,4 +21,22 @@ describe('validarPropostaIA', () => {
     expect(resultado.notas).toBe(textoSimples);
     expect(resultado.markdown_gerado).toBe(textoSimples);
   });
+
+  it('valida itens financeiros de uma nota sem convertê-los em prescrição', () => {
+    const resultado = validarPropostaIA(JSON.stringify({
+      tipo_documento: 'nota_compra_medicamento',
+      precos_medicamentos: [{
+        nome_medicamento: 'Dipirona',
+        quantidade: 2,
+        valor_unitario: 8.5,
+        valor_total: 17,
+        moeda: 'BRL',
+        comprado_em: '2026-07-28',
+      }],
+    }));
+
+    expect(resultado.medicamentos).toBeUndefined();
+    expect(resultado.precos_medicamentos?.[0].valor_total).toBe(17);
+    expect(resultado.precos_medicamentos?.[0].moeda).toBe('BRL');
+  });
 });
