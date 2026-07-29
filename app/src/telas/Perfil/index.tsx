@@ -11,7 +11,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { obterArquivoLocal } from '../../core/storage/indexedDB';
 import { buscarMembro } from '../../modulos/membros/casos-de-uso/repositorioMembros';
 import { listarMedicamentos, salvarMedicamento, excluirMedicamento } from '../../modulos/medicamentos/casos-de-uso/repositorioMedicamentos';
-import { listarPrecosMedicamento } from '../../modulos/medicamentos/casos-de-uso/repositorioPrecosMedicamentos';
+import { listarPrecosMedicamento, registrarPrecoMedicamento } from '../../modulos/medicamentos/casos-de-uso/repositorioPrecosMedicamentos';
 import { listarExames, salvarExame, excluirExame } from '../../modulos/exames/casos-de-uso/repositorioExames';
 import { listarVacinas, salvarVacina, excluirVacina } from '../../modulos/vacinas/casos-de-uso/repositorioVacinas';
 import type { Membro } from '../../modulos/membros/entidades/membro';
@@ -47,7 +47,7 @@ export function Perfil() {
   const [erroMembro, setErroMembro] = useState<'nao_encontrado' | 'sem_acesso' | null>(null);
 
   // Modais de Adição
-  const [modalTipo, setModalTipo] = useState<'med' | 'exame' | 'vacina' | 'vincular-exame' | null>(null);
+  const [modalTipo, setModalTipo] = useState<'med' | 'preco-med' | 'exame' | 'vacina' | 'vincular-exame' | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   // Modal Vincular Exame Existente
@@ -74,6 +74,15 @@ export function Perfil() {
   const [medFreq, setMedFreq] = useState('');
   const [medStatus, setMedStatus] = useState<StatusMedicamento>('em_uso');
   const [medRenovaEm, setMedRenovaEm] = useState('');
+
+  // Form Compra de Medicamento
+  const [precoMedNome, setPrecoMedNome] = useState('');
+  const [precoMedApresentacao, setPrecoMedApresentacao] = useState('');
+  const [precoMedQuantidade, setPrecoMedQuantidade] = useState('1');
+  const [precoMedValorUnitario, setPrecoMedValorUnitario] = useState('');
+  const [precoMedValorTotal, setPrecoMedValorTotal] = useState('');
+  const [precoMedCompradoEm, setPrecoMedCompradoEm] = useState(new Date().toISOString().split('T')[0]);
+  const [precoMedEstabelecimento, setPrecoMedEstabelecimento] = useState('');
 
   // Form Exame
   const [exMarcador, setExMarcador] = useState('');
@@ -183,6 +192,43 @@ export function Perfil() {
     }
   };
 
+  const handleRegistrarCompraMedicamento = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!familiaId || !id || !usuario || !precoMedNome.trim()) return;
+
+    const quantidade = Number(precoMedQuantidade.replace(',', '.'));
+    const valorUnitario = Number(precoMedValorUnitario.replace(',', '.'));
+    const valorTotalInformado = Number(precoMedValorTotal.replace(',', '.'));
+    const valorTotal = precoMedValorTotal.trim() ? valorTotalInformado : quantidade * valorUnitario;
+    if (quantidade <= 0 || valorUnitario < 0 || valorTotal < 0 || !Number.isFinite(valorTotal)) return;
+
+    setSalvando(true);
+    try {
+      const medicamento = medicamentos.find(
+        (item) => item.nome.localeCompare(precoMedNome.trim(), 'pt-BR', { sensitivity: 'base' }) === 0,
+      );
+      await registrarPrecoMedicamento(familiaId, {
+        membro_id: id,
+        medicamento_id: medicamento?.id,
+        nome_medicamento: precoMedNome.trim(),
+        apresentacao: precoMedApresentacao.trim() || undefined,
+        quantidade,
+        valor_unitario: valorUnitario,
+        valor_total: valorTotal,
+        moeda: 'BRL',
+        comprado_em: precoMedCompradoEm,
+        estabelecimento: precoMedEstabelecimento.trim() || undefined,
+        criado_por_uid: usuario.uid,
+      });
+      fecharModal();
+      await carregarTudo();
+    } catch (err) {
+      alert('Erro ao registrar compra: ' + (err as Error).message);
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   const abrirModalVincularExame = async () => {
     if (!familiaId) return;
     setModalTipo('vincular-exame');
@@ -246,6 +292,13 @@ export function Perfil() {
     setMedDose('');
     setMedFreq('');
     setMedRenovaEm('');
+    setPrecoMedNome('');
+    setPrecoMedApresentacao('');
+    setPrecoMedQuantidade('1');
+    setPrecoMedValorUnitario('');
+    setPrecoMedValorTotal('');
+    setPrecoMedCompradoEm(new Date().toISOString().split('T')[0]);
+    setPrecoMedEstabelecimento('');
     setExMarcador('');
     setExValor('');
     setExUnidade('');
@@ -478,12 +531,17 @@ export function Perfil() {
           )}
 
           <div className="mt-6 pt-5 border-t border-borda">
-            <h3 className="text-sm font-semibold text-texto mb-3">
-              Histórico de valores ({precosMedicamentos.length})
-            </h3>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h3 className="text-sm font-semibold text-texto">
+                Histórico de preços de compra ({precosMedicamentos.length})
+              </h3>
+              <Botao variante="secundario" tamanho="sm" icone={<Plus size={16} />} onClick={() => setModalTipo('preco-med')}>
+                Registrar compra
+              </Botao>
+            </div>
             {precosMedicamentos.length === 0 ? (
               <p className="text-sm text-texto-secundario">
-                Envie uma nota ou cupom de medicamento pela Caixa de Entrada para iniciar o histórico.
+                Registre uma compra ou envie uma nota/cupom pela Caixa de Entrada para iniciar o histórico e comparar preços.
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -668,6 +726,58 @@ export function Perfil() {
                 <Botao variante="secundario" tamanho="sm" type="button" onClick={fecharModal}>Cancelar</Botao>
                 <Botao tamanho="sm" type="submit" disabled={salvando || !medNome.trim()} icone={salvando ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}>
                   {salvando ? 'Salvar...' : 'Salvar no Firestore'}
+                </Botao>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal Registrar Compra de Medicamento */}
+      {modalTipo === 'preco-med' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={fecharModal} />
+          <div className="relative bg-fundo-card border border-borda rounded-[var(--radius-lg)] p-6 max-w-md w-full max-h-[85dvh] overflow-y-auto space-y-4 shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-texto flex items-center gap-2">
+                <Pill size={20} className="text-salus-400" />
+                Registrar compra
+              </h3>
+              <button onClick={fecharModal} className="text-texto-secundario hover:text-texto"><X size={18} /></button>
+            </div>
+            <p className="text-sm text-texto-secundario">
+              Cada compra fica no histórico para você comparar os preços antes da próxima compra.
+            </p>
+            <form onSubmit={handleRegistrarCompraMedicamento} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-texto-secundario mb-1">Medicamento *</label>
+                <input
+                  list="medicamentos-do-membro"
+                  value={precoMedNome}
+                  onChange={(e) => setPrecoMedNome(e.target.value)}
+                  placeholder="ex: Losartana"
+                  required
+                  className="w-full px-3 py-2.5 rounded-[var(--radius-md)] bg-fundo-elevado border border-borda text-texto text-sm"
+                />
+                <datalist id="medicamentos-do-membro">
+                  {medicamentos.map((med) => <option key={med.id} value={med.nome} />)}
+                </datalist>
+              </div>
+              <Campo label="Apresentação" value={precoMedApresentacao} onChange={(e) => setPrecoMedApresentacao(e.target.value)} placeholder="ex: caixa com 30 comprimidos" />
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Quantidade *" type="number" min="0.01" step="0.01" value={precoMedQuantidade} onChange={(e) => setPrecoMedQuantidade(e.target.value)} required />
+                <Campo label="Data da compra *" type="date" value={precoMedCompradoEm} onChange={(e) => setPrecoMedCompradoEm(e.target.value)} required />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Preço unitário (R$) *" type="number" min="0" step="0.01" value={precoMedValorUnitario} onChange={(e) => setPrecoMedValorUnitario(e.target.value)} placeholder="0,00" required />
+                <Campo label="Total pago (R$)" type="number" min="0" step="0.01" value={precoMedValorTotal} onChange={(e) => setPrecoMedValorTotal(e.target.value)} placeholder="calculado automaticamente" />
+              </div>
+              <Campo label="Farmácia / Estabelecimento" value={precoMedEstabelecimento} onChange={(e) => setPrecoMedEstabelecimento(e.target.value)} placeholder="ex: Farmácia Central" />
+              <div className="flex justify-end gap-2 pt-2 border-t border-borda">
+                <Botao variante="secundario" tamanho="sm" type="button" onClick={fecharModal}>Cancelar</Botao>
+                <Botao tamanho="sm" type="submit" disabled={salvando || !precoMedNome.trim() || !precoMedValorUnitario} icone={salvando ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}>
+                  {salvando ? 'Salvando...' : 'Adicionar ao histórico'}
                 </Botao>
               </div>
             </form>
