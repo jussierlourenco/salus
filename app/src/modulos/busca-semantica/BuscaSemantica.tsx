@@ -7,6 +7,7 @@ import { Card, Badge, Botao } from '../../core/ui';
 import { criarProvedor } from '../../core/ia/interface';
 import type { ConfigProvedorIA } from '../../types/dominio';
 import type { CaixaEntradaItem } from '../../modulos/caixa-entrada/entidades/caixaEntrada';
+import { destacarTermos } from './destaque';
 
 interface BuscaSemanticaProps {
   caixaEntrada: CaixaEntradaItem[];
@@ -31,14 +32,6 @@ function extrairTexto(md?: string): string {
     .toLowerCase();
 }
 
-function destacar(texto: string, termos: string[]): string {
-  const parts = texto.split(new RegExp(`(${termos.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi'));
-  return parts.map((part) =>
-    termos.some(t => t.toLowerCase() === part.toLowerCase())
-      ? `<mark class="bg-salus-600/30 text-salus-300 rounded-sm px-0.5">${part}</mark>`
-      : part,
-  ).join('');
-}
 
 function gerarTermos(query: string): string[] {
   return query
@@ -234,10 +227,9 @@ export function BuscaSemantica({ caixaEntrada, configIA, onAbrirDocumento }: Bus
                     </span>
                   )}
                 </div>
-                <p
-                  className="text-xs text-texto-secundario line-clamp-2 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: destacar(r.trecho, gerarTermos(query)) }}
-                />
+                <p className="text-xs text-texto-secundario line-clamp-2 leading-relaxed">
+                  {destacarTermos(r.trecho, gerarTermos(query))}
+                </p>
               </div>
             </button>
           ))}

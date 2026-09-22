@@ -133,7 +133,7 @@ export function Ajustes() {
       if (encontrado) setPresetSel(encontrado.id);
       else setPresetSel('custom');
     }
-  }, []);
+  }, [config.provedor_ia]);
 
   useEffect(() => {
     async function carregarMembrosFamilia() {

@@ -19,11 +19,32 @@ import { buscarFamilia, sairDaFamilia } from '../database/repositorioFamilias';
 import { exportarParaZip, baixarArquivo } from '../storage/exportImport';
 
 const STORAGE_KEY = 'salus_config_usuario';
+const STORAGE_KEY_IA_CHAVE = 'salus_ia_chave';
+
+function obterChaveIALocal(): string {
+  try {
+    return localStorage.getItem(STORAGE_KEY_IA_CHAVE) || '';
+  } catch {
+    return '';
+  }
+}
+
+function salvarChaveIALocal(chave: string) {
+  try {
+    if (chave) {
+      localStorage.setItem(STORAGE_KEY_IA_CHAVE, chave);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_IA_CHAVE);
+    }
+  } catch (e) {
+    console.warn('[ConfigContext] Falha ao salvar chave IA no localStorage:', e);
+  }
+}
 
 /**
- * localStorage é só cache de leitura (evita flash de UI vazia); nunca deve reter
- * a chave de IA além da sessão em memória (o access token do Drive nunca é persistido
- * em lugar nenhum — vive só em memória, ver core/storage/googleAuth.ts).
+ * localStorage para o documento geral é só cache de leitura (evita flash de UI vazia).
+ * A chave de IA é mantida per-device em STORAGE_KEY_IA_CHAVE e NUNCA é enviada
+ * para o documento do Firestore compartilhado com outros membros da família.
  */
 function paraCacheSemSegredos(config: ConfigUsuario): ConfigUsuario {
   return {
@@ -49,7 +70,14 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<ConfigUsuario>(() => {
     try {
       const local = localStorage.getItem(STORAGE_KEY);
-      if (local) return JSON.parse(local);
+      if (local) {
+        const parsed = JSON.parse(local) as ConfigUsuario;
+        const chaveLocal = obterChaveIALocal();
+        if (parsed.provedor_ia && chaveLocal) {
+          parsed.provedor_ia.chave = chaveLocal;
+        }
+        return parsed;
+      }
     } catch (e) {
       console.warn('[ConfigContext] Falha ao ler localStorage:', e);
     }
@@ -68,7 +96,14 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       setCarregando(true);
       const remoto = await obterConfigUsuario(familiaId);
       if (ativo) {
-        setConfig(remoto);
+        const chaveLocal = obterChaveIALocal();
+        const configComChave: ConfigUsuario = {
+          ...remoto,
+          provedor_ia: remoto.provedor_ia
+            ? { ...remoto.provedor_ia, chave: chaveLocal }
+            : undefined,
+        };
+        setConfig(configComChave);
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(paraCacheSemSegredos(remoto)));
         } catch (e) {
@@ -87,7 +122,14 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const refreshConfig = async () => {
     if (!familiaId) return;
     const remoto = await obterConfigUsuario(familiaId);
-    setConfig(remoto);
+    const chaveLocal = obterChaveIALocal();
+    const configComChave: ConfigUsuario = {
+      ...remoto,
+      provedor_ia: remoto.provedor_ia
+        ? { ...remoto.provedor_ia, chave: chaveLocal }
+        : undefined,
+    };
+    setConfig(configComChave);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(paraCacheSemSegredos(remoto)));
     } catch (e) {
@@ -96,6 +138,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   };
 
   const salvarConfigIA = async (configIA: ConfigProvedorIA | null) => {
+    salvarChaveIALocal(configIA?.chave || '');
+
     const nova: ConfigUsuario = {
       ...config,
       provedor_ia: configIA ?? undefined,
@@ -148,6 +192,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       }
     }
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY_IA_CHAVE);
     setConfig(CONFIG_PADRAO);
   };
 

@@ -50,11 +50,14 @@ export class ProvedorGemini implements ProvedorIA {
     let tevelimiteExcedido = false;
 
     for (const mod of modelosParaTestar) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${this.chave}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent`;
       try {
         const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': this.chave,
+          },
           body: JSON.stringify(payload),
         });
 

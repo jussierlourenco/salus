@@ -171,9 +171,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // CONFIG — apenas membros da família
+    // CONFIG — apenas membros da família; impede vazamento de chave de API em documento compartilhado
     match /familias/{familiaId}/config/{id} {
-      allow read, write: if isFamiliaMember(familiaId);
+      allow read: if isFamiliaMember(familiaId);
+      allow write: if isFamiliaMember(familiaId)
+        && (!request.resource.data.keys().hasAny(['provedor_ia'])
+            || !('chave' in request.resource.data.provedor_ia)
+            || request.resource.data.provedor_ia.chave == '');
     }
 
     // ===== COLLECTION GROUP — descoberta de membros compartilhados =====

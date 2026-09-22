@@ -53,8 +53,11 @@ export async function obterConfigUsuario(familiaId: string): Promise<ConfigUsuar
 
 export async function salvarConfigUsuario(familiaId: string, config: Partial<ConfigUsuario>): Promise<void> {
   const ref = docConfig(familiaId);
+  const { provedor_ia, ...resto } = config;
   const payload = {
-    ...config,
+    ...resto,
+    // A chave de API NUNCA vai para o documento compartilhado da família no Firestore
+    ...(provedor_ia ? { provedor_ia: { ...provedor_ia, chave: '' } } : {}),
     atualizado_em: new Date().toISOString(),
   };
 

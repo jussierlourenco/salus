@@ -12,6 +12,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - **Histórico de preços de medicamentos**: compras podem ser registradas manualmente na aba Medicamentos ou extraídas de notas e cupons. Cada observação financeira é imutável e guarda data, apresentação, quantidade, valores efetivamente pagos, estabelecimento e, quando houver, documento de origem para comparação em compras futuras.
 
 ### Segurança
+- **Eliminação de XSS na busca semântica**: remoção de `dangerouslySetInnerHTML` e renderização de termos com nós React nativos (`<mark>` e `<span>`), prevenindo execução arbitrária a partir de documentos e saídas de LLM.
+- **Proteção de credencial Gemini**: chave de API transferida da query string da URL para o cabeçalho HTTP oficial `x-goog-api-key`.
+- **Isolamento de chave BYOK**: chave de IA armazenada exclusivamente per-device em `localStorage`, nunca persistida no documento compartilhado da família no Firestore; regras do Firestore atualizadas para rejeitar escrita de chaves em texto claro.
 - Registros de preço são append-only no Firestore. Convidados só podem inserir documentos e preços para membros explicitamente compartilhados; não recebem acesso ao restante da família.
 - O arquivo original local continua acessível apenas no navegador do remetente e essa propriedade é registrada em `storage_owner_uid`.
 
